@@ -2,9 +2,12 @@
 #include "scheduler.c"
 #include "CuTest.h"
 
-void schedulerInitTest( CuTest* tc );
+int expectedMotorNumber;
 
-void schedulerInitTest( CuTest* tc ) {
+static void schedulerInitTest( CuTest *tc );
+static void moveMotorTest( CuTest *tc );
+
+static void schedulerInitTest( CuTest *tc ) {
     int i;
 
     CuAssert( tc, "Did not successfully initialize.", schedulerInit() );
@@ -21,24 +24,19 @@ void schedulerInitTest( CuTest* tc ) {
     }
 }
 
-void motorMovementTest( CuTest* tc ) {
-    CuAssert( tc, "First call should work.", moveMotor( 0 ) == 1 );
+static void moveMotorTest( CuTest *tc ) {
+    expectedMotorNumber = -1;
+    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0 ) );
 
-    CuAssert( tc, "Subsequent calls should not work.", moveMotor( 0 ) == 0 );
-    CuAssert( tc, "Subsequent calls should not work.", moveMotor( 0 ) == 0 );
-
-    CuAssert( tc, "Resetting should make it work.", moveMotor( -1 ) == 1 );
-    CuAssert( tc, "Cannot reset twice in a row.", moveMotor( -1 ) == 0 );
-
-    CuAssert( tc, "Can make another normal call.", moveMotor( 0 ) == 1 );
-    CuAssert( tc, "Resetting should make it work.", moveMotor( -1 ) == 1 );
+    expectedMotorNumber = 0;
+    CuAssert( tc, "Gave the expected motor number, should work.", moveMotor( 0 ) );
 }
 
 CuSuite* CuGetSuite( void ) {
     CuSuite* suite = CuSuiteNew();
 
     SUITE_ADD_TEST( suite, schedulerInitTest );
-    SUITE_ADD_TEST( suite, motorMovementTest );
+    SUITE_ADD_TEST( suite, moveMotorTest );
 
     return suite;
 }

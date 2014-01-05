@@ -5,7 +5,11 @@
 
 static MotorMovement motorMovement[NUM_MOTORS];
 
-static int moveMotor( int8_t motorNumber );
+#ifdef TEST
+extern int expectedMotorNumber;
+#endif
+
+static int moveMotor( int motorNumber );
 
 int schedulerInit( void ) {
     int i;
@@ -24,22 +28,12 @@ int schedulerInit( void ) {
     return 1;
 }
 
-static int moveMotor( int8_t motorNumber ) {
+static int moveMotor( int motorNumber ) {
 #ifdef TEST
-    static int8_t lastMotorNumber = INT8_MAX;
-
-    if( motorNumber < 0 ) {
-        if( lastMotorNumber >= 0 && -( motorNumber + 1 ) == lastMotorNumber ) {
-            lastMotorNumber = INT8_MAX;
-            return 1;
-        } else {
-            return 0;
-        }
-    } else if( lastMotorNumber != INT8_MAX ) {
+    if( expectedMotorNumber < 0 ) {
         return 0;
     } else {
-        lastMotorNumber = motorNumber;
-        return 1;
+        return motorNumber == expectedMotorNumber;
     }
 #else
     if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
