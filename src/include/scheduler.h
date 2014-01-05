@@ -1,14 +1,21 @@
-typedef struct Movement Movement;
+typedef struct MotorMovement MotorMovement;
 
-enum MotorSpeed {
+enum MotorStatus {
     Idle = 0,
     Accelerating = 1,
     Deaccelerating = 2,
-    Constant = 3
+    ConstantSpeed = 3
 };
 
-struct Movement {
-    enum MotorSpeed motorSpeed;
-    uint32_t steps;
-    uint16_t fractionalStep;
+struct MotorMovement {
+    enum MotorStatus motorStatus;
+    int32_t steps;
+    int16_t fractionalStep;
+    int8_t maxSpeed;
+    int8_t speed;
+    int16_t fractionalSpeed;
+    int8_t acceleration;
+    int16_t fractionalAcceleration;
 };
+
+int schedulerInit( void );

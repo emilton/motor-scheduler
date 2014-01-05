@@ -26,7 +26,7 @@ endef
 
 define make_test =
 $(call testexe,$1): $(call test,$1) $(call code,$1) $(call incl,$($1_incl)) $(call lib,$($1_lib) CuTest)
-	$(cc) $(call testexe,$1) -Isrc/main/ $(call test,$1) $(call lib,$($1_lib) CuTest)
+	$(cc) $(call testexe,$1) -Isrc/main/ -DTEST $(call test,$1) $(call lib,$($1_lib) CuTest)
 	target/$1_test; if [ $$$$? -ne 0 ]; then rm target/$1_test; exit 1; fi
 endef
 
