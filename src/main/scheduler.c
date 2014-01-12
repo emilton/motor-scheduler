@@ -48,6 +48,7 @@ int updateMotors( void ) {
                 }
                 break;
             case Deaccelerating:
+                currentMotor->speed -= currentMotor->acceleration;
                 break;
             case ConstantSpeed:
                 break;
