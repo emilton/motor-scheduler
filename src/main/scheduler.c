@@ -20,9 +20,37 @@ int schedulerInit( void ) {
         motorMovement[i].fractionalStep = 0;
         motorMovement[i].maxSpeed = 0;
         motorMovement[i].speed = 0;
-        motorMovement[i].fractionalSpeed = 0;
         motorMovement[i].acceleration = 0;
-        motorMovement[i].fractionalAcceleration = 0;
+    }
+
+    return 1;
+}
+
+int updateMotors( void ) {
+    int i;
+    MotorMovement *currentMotor;
+
+    for( i = 0; i < NUM_MOTORS; ++i ) {
+        currentMotor = &motorMovement[i];
+        switch( currentMotor->motorStatus ) {
+            case Idle:
+                continue;
+            case Accelerating:
+                currentMotor->speed += currentMotor->acceleration;
+                if( currentMotor->speed >= currentMotor->maxSpeed ) {
+                    currentMotor->speed = currentMotor->maxSpeed;
+                    currentMotor->motorStatus = ConstantSpeed;
+                }
+                break;
+            case Deaccelerating:
+                break;
+            case ConstantSpeed:
+                break;
+            default:
+                return 0;
+        }
+
+        currentMotor->fractionalStep += currentMotor->speed;
     }
 
     return 1;

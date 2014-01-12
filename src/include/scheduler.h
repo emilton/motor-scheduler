@@ -10,12 +10,12 @@ enum MotorStatus {
 struct MotorMovement {
     enum MotorStatus motorStatus;
     int32_t steps;
-    int16_t fractionalStep;
-    int8_t maxSpeed;
-    int8_t speed;
-    int16_t fractionalSpeed;
-    int8_t acceleration;
-    int16_t fractionalAcceleration;
+    int32_t fractionalStep;
+    int32_t maxSpeed;
+    int32_t speed;
+    int32_t acceleration;
 };
 
 int schedulerInit( void );
+int updateMotors( void );
+
