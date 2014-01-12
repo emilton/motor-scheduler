@@ -42,8 +42,8 @@ int updateMotors( void ) {
             case Accelerating:
                 currentMotor->speed += currentMotor->acceleration;
                 if( currentMotor->speed >= currentMotor->maxSpeed ) {
-                    currentMotor->speed = currentMotor->maxSpeed;
                     currentMotor->motorStatus = ConstantSpeed;
+                    currentMotor->speed = currentMotor->maxSpeed;
                 }
                 break;
             case Deaccelerating:
@@ -62,6 +62,9 @@ int updateMotors( void ) {
                 return 0;
             }
             currentMotor->stepsTaken++;
+            if( currentMotor->motorStatus == Accelerating && currentMotor->stepsTaken >= ( currentMotor->steps >> 1 ) ) {
+                currentMotor->motorStatus = Deaccelerating;
+            }
             if( currentMotor->stepsTaken == currentMotor->steps ) {
                 currentMotor->motorStatus = Idle;
             }

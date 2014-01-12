@@ -85,6 +85,7 @@ static void updateMotorsTest_AcceleratingTriangle( CuTest *tc ) {
     motorMovement[0].fractionalStep = INT32_MAX - 99;
 
     updateMotors();
+    CuAssert( tc, "Should have started deacceleration.", motorMovement[0].motorStatus == Deaccelerating );
 }
 
 static void updateMotorsTest_MoveMotor( CuTest *tc ) {
