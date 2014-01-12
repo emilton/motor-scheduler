@@ -97,10 +97,11 @@ static void updateMotorsTest_AcceleratingTriangle( CuTest *tc ) {
 static void updateMotorsTest_Deaccelerating( CuTest *tc ) {
     setupMotors();
     motorMovement[0].motorStatus = Deaccelerating;
+    motorMovement[0].speed = 100;
 
     updateMotors();
-    CuAssert( tc, "Should have decremented speed.", motorMovement[0].speed == -100 );
-    CuAssert( tc, "Should have decremented fractionalStep.", motorMovement[0].fractionalStep == -100 );
+    CuAssert( tc, "Should have decremented speed.", motorMovement[0].speed == 0 );
+    CuAssert( tc, "Should have decremented fractionalStep.", motorMovement[0].fractionalStep == 0 );
 }
 
 static void updateMotorsTest_ConstantSpeed( CuTest *tc ) {

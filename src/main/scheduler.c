@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include "scheduler.h"
 
 #define NUM_MOTORS 1
@@ -11,6 +12,8 @@ extern int expectedMotorNumber;
 extern int expectedMotorDirection;
 #endif
 
+static void updateSpeed( MotorMovement * );
+static void updateMotorStatus( MotorMovement * );
 static int moveMotor( int, int );
 
 int schedulerInit( void ) {
@@ -32,51 +35,76 @@ int schedulerInit( void ) {
 int updateMotors( void ) {
     int i;
     char oldSign, speedSign;
-    MotorMovement *currentMotor;
+    MotorMovement *motor;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
-        currentMotor = &motorMovement[i];
-        switch( currentMotor->motorStatus ) {
-            case Idle:
-                continue;
-            case Accelerating:
-                currentMotor->speed += currentMotor->acceleration;
-                if( currentMotor->speed >= currentMotor->maxSpeed ) {
-                    currentMotor->motorStatus = ConstantSpeed;
-                    currentMotor->deaccelerationStart = currentMotor->steps - currentMotor->stepsTaken;
-                    currentMotor->speed = currentMotor->maxSpeed;
-                }
-                break;
-            case Deaccelerating:
-                currentMotor->speed -= currentMotor->acceleration;
-                break;
-            case ConstantSpeed:
-                break;
-            default:
-                return 0;
-        }
+        motor = &motorMovement[i];
+        updateSpeed( motor );
 
-        oldSign = sign( currentMotor->fractionalStep );
-        speedSign = sign( currentMotor->speed );
-        currentMotor->fractionalStep += currentMotor->speed;
-        if( oldSign != sign( currentMotor->fractionalStep ) && oldSign == speedSign ) {
+        oldSign = sign( motor->fractionalStep );
+        speedSign = sign( motor->speed );
+        motor->fractionalStep += motor->speed;
+        if( oldSign != sign( motor->fractionalStep ) && oldSign == speedSign ) {
             if( !moveMotor( i, speedSign ) ) {
                 return 0;
             }
-            currentMotor->stepsTaken++;
-            if( currentMotor->motorStatus == Accelerating && currentMotor->stepsTaken >= ( currentMotor->steps >> 1 ) ) {
-                currentMotor->motorStatus = Deaccelerating;
-            }
-            if( currentMotor->motorStatus == ConstantSpeed && currentMotor->stepsTaken >= currentMotor->deaccelerationStart ) {
-                currentMotor->motorStatus = Deaccelerating;
-            }
-            if( currentMotor->stepsTaken == currentMotor->steps ) {
-                currentMotor->motorStatus = Idle;
-            }
+            motor->stepsTaken++;
         }
+
+        updateMotorStatus( motor );
     }
 
     return 1;
+}
+
+static void updateSpeed( MotorMovement *motor ) {
+    switch( motor->motorStatus ) {
+        case Idle:
+            break;
+        case Accelerating:
+            motor->speed += motor->acceleration;
+            if( abs( motor->speed ) > abs( motor->maxSpeed ) ) {
+                motor->speed = motor->maxSpeed;
+            }
+            break;
+        case Deaccelerating:
+            motor->speed -= motor->acceleration;
+            if( sign( motor->speed ) != sign( motor->acceleration ) ) {
+                motor->speed = 0;
+            }
+            break;
+        case ConstantSpeed:
+            break;
+    }
+}
+
+static void updateMotorStatus( MotorMovement *motor ) {
+    switch( motor->motorStatus ) {
+        case Idle:
+            break;
+        case Accelerating:
+            if( motor->stepsTaken >= ( motor->steps >> 1 ) ) {
+                motor->motorStatus = Deaccelerating;
+            } else if( motor->speed == motor->maxSpeed ) {
+                motor->motorStatus = ConstantSpeed;
+                motor->deaccelerationStart = motor->steps - motor->stepsTaken;
+            }
+            break;
+        case Deaccelerating:
+            if( motor->speed == 0 ) {
+                motor->motorStatus = Idle;
+            }
+            break;
+        case ConstantSpeed:
+            if( motor->stepsTaken >= motor->deaccelerationStart ) {
+                motor->motorStatus = Deaccelerating;
+            }
+            break;
+    }
+
+    if( motor->stepsTaken == motor->steps ) {
+        motor->motorStatus = Idle;
+    }
 }
 
 static int moveMotor( int motorNumber, int forwardDirection ) {
