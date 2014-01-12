@@ -2,6 +2,7 @@
 #include "scheduler.h"
 
 #define NUM_MOTORS 1
+#define sign(x) ( x >= 0 )
 
 static MotorMovement motorMovement[NUM_MOTORS];
 
@@ -29,7 +30,7 @@ int schedulerInit( void ) {
 
 int updateMotors( void ) {
     int i;
-    int32_t oldFractionalStep;
+    char oldSign, speedSign;
     MotorMovement *currentMotor;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
@@ -52,14 +53,11 @@ int updateMotors( void ) {
                 return 0;
         }
 
-        oldFractionalStep = currentMotor->fractionalStep;
+        oldSign = sign( currentMotor->fractionalStep );
+        speedSign = sign( currentMotor->speed );
         currentMotor->fractionalStep += currentMotor->speed;
-        if( oldFractionalStep > 0 && currentMotor->speed > 0 && currentMotor->fractionalStep < 0 ) {
-            if( !moveMotor( i, 1 ) ) {
-                return 0;
-            }
-        } else if( oldFractionalStep < 0 && currentMotor->speed < 0 && currentMotor->fractionalStep > 0 ) {
-            if( !moveMotor( i, 0 ) ) {
+        if( oldSign != sign( currentMotor->fractionalStep ) && oldSign == speedSign ) {
+            if( !moveMotor( i, speedSign ) ) {
                 return 0;
             }
         }
