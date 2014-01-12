@@ -7,9 +7,10 @@ static MotorMovement motorMovement[NUM_MOTORS];
 
 #ifdef TEST
 extern int expectedMotorNumber;
+extern int expectedMotorDirection;
 #endif
 
-static int moveMotor( int motorNumber );
+static int moveMotor( int, int );
 
 int schedulerInit( void ) {
     int i;
@@ -54,11 +55,11 @@ int updateMotors( void ) {
         oldFractionalStep = currentMotor->fractionalStep;
         currentMotor->fractionalStep += currentMotor->speed;
         if( oldFractionalStep > 0 && currentMotor->speed > 0 && currentMotor->fractionalStep < 0 ) {
-            if( !moveMotor( i ) ) {
+            if( !moveMotor( i, 1 ) ) {
                 return 0;
             }
         } else if( oldFractionalStep < 0 && currentMotor->speed < 0 && currentMotor->fractionalStep > 0 ) {
-            if( !moveMotor( i ) ) {
+            if( !moveMotor( i, 0 ) ) {
                 return 0;
             }
         }
@@ -67,12 +68,12 @@ int updateMotors( void ) {
     return 1;
 }
 
-static int moveMotor( int motorNumber ) {
+static int moveMotor( int motorNumber, int forwardDirection ) {
 #ifdef TEST
-    if( expectedMotorNumber < 0 ) {
+    if( expectedMotorNumber < 0 || expectedMotorDirection < 0 ) {
         return 0;
     } else {
-        return motorNumber == expectedMotorNumber;
+        return motorNumber == expectedMotorNumber && forwardDirection == expectedMotorDirection;
     }
 #else
     if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {

@@ -5,6 +5,7 @@
 #define updateMotors() CuAssert( tc, "Should not have error updating motors.", updateMotors() )
 
 int expectedMotorNumber;
+int expectedMotorDirection;
 
 static void schedulerInitTest( CuTest *tc );
 static void moveMotorTest( CuTest *tc );
@@ -31,10 +32,14 @@ static void schedulerInitTest( CuTest *tc ) {
 
 static void moveMotorTest( CuTest *tc ) {
     expectedMotorNumber = -1;
-    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0 ) );
+    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0, 1 ) );
 
     expectedMotorNumber = 0;
-    CuAssert( tc, "Gave the expected motor number, should work.", moveMotor( 0 ) );
+    expectedMotorDirection = 1;
+    CuAssert( tc, "Gave the expected motor number and direction, should work.", moveMotor( 0, 1 ) );
+
+    expectedMotorDirection = 0;
+    CuAssert( tc, "Gave the expected motor number and direction, should work.", moveMotor( 0, 0 ) );
 }
 
 static void setupMotors( void ) {
@@ -82,6 +87,7 @@ static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     expectedMotorNumber = -1;
     updateMotors();
     expectedMotorNumber = 0;
+    expectedMotorDirection = 1;
     updateMotors();
 
     motorMovement[0].speed = 0;
@@ -91,6 +97,7 @@ static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     expectedMotorNumber = -1;
     updateMotors();
     expectedMotorNumber = 0;
+    expectedMotorDirection = 0;
     updateMotors();
 }
 
