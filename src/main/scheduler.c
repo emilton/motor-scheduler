@@ -60,6 +60,10 @@ int updateMotors( void ) {
             if( !moveMotor( i, speedSign ) ) {
                 return 0;
             }
+            currentMotor->steps--;
+            if( !currentMotor->steps ) {
+                currentMotor->motorStatus = Idle;
+            }
         }
     }
 

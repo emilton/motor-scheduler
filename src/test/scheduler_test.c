@@ -14,6 +14,7 @@ static void updateMotorsTest_Idle( CuTest *tc );
 static void updateMotorsTest_Accelerating( CuTest *tc );
 static void updateMotorsTest_AcceleratingTriangle( CuTest *tc );
 static void updateMotorsTest_MoveMotor( CuTest *tc );
+static void updateMotorsTest_CompleteMove( CuTest *tc );
 
 static void schedulerInitTest( CuTest *tc ) {
     int i;
@@ -51,6 +52,7 @@ static void setupMotors( void ) {
     motorMovement[0].acceleration = 100;
 
     expectedMotorNumber = 0;
+    expectedMotorDirection = 1;
 }
 
 static void updateMotorsTest_Idle( CuTest *tc ) {
@@ -89,6 +91,7 @@ static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     expectedMotorNumber = 0;
     expectedMotorDirection = 1;
     updateMotors();
+    CuAssert( tc, "Should have decremented a step.", motorMovement[0].steps == 99 );
 
     motorMovement[0].speed = 0;
     motorMovement[0].acceleration = -100;
@@ -99,6 +102,17 @@ static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     expectedMotorNumber = 0;
     expectedMotorDirection = 0;
     updateMotors();
+    CuAssert( tc, "Should have decremented a step.", motorMovement[0].steps == 98 );
+}
+
+static void updateMotorsTest_CompleteMove( CuTest *tc ) {
+    setupMotors();
+    motorMovement[0].motorStatus = Accelerating;
+    motorMovement[0].fractionalStep = INT32_MAX - 99;
+    motorMovement[0].steps = 1;
+
+    updateMotors();
+    CuAssert( tc, "Should be done moving.", motorMovement[0].motorStatus == Idle );
 }
 
 CuSuite* CuGetSuite( void ) {
@@ -110,6 +124,7 @@ CuSuite* CuGetSuite( void ) {
     SUITE_ADD_TEST( suite, updateMotorsTest_Accelerating );
     SUITE_ADD_TEST( suite, updateMotorsTest_AcceleratingTriangle );
     SUITE_ADD_TEST( suite, updateMotorsTest_MoveMotor );
+    SUITE_ADD_TEST( suite, updateMotorsTest_CompleteMove );
 
     return suite;
 }
