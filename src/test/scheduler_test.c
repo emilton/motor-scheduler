@@ -24,6 +24,7 @@ static void schedulerInitTest( CuTest *tc ) {
     for( i = 0; i < NUM_MOTORS; ++i ) {
         CuAssert( tc, "Did not set the status.", motorMovement[i].motorStatus == Idle );
         CuAssert( tc, "Did not set the steps.", motorMovement[i].steps == 0 );
+        CuAssert( tc, "Did not set the steps taken.", motorMovement[i].stepsTaken == 0 );
         CuAssert( tc, "Did not set the fractionStep.", motorMovement[i].fractionalStep == 0 );
         CuAssert( tc, "Did not set the maxSpeed.", motorMovement[i].maxSpeed == 0 );
         CuAssert( tc, "Did not set the speed.", motorMovement[i].speed == 0 );
@@ -46,6 +47,7 @@ static void moveMotorTest( CuTest *tc ) {
 static void setupMotors( void ) {
     motorMovement[0].motorStatus = Idle;
     motorMovement[0].steps = 100;
+    motorMovement[0].stepsTaken = 0;
     motorMovement[0].fractionalStep = 0;
     motorMovement[0].maxSpeed = 10000;
     motorMovement[0].speed = 0;
@@ -78,6 +80,10 @@ static void updateMotorsTest_Accelerating( CuTest *tc ) {
 
 static void updateMotorsTest_AcceleratingTriangle( CuTest *tc ) {
     setupMotors();
+    motorMovement[0].motorStatus = Accelerating;
+    motorMovement[0].stepsTaken = 49;
+    motorMovement[0].fractionalStep = INT32_MAX - 99;
+
     updateMotors();
 }
 
@@ -91,7 +97,7 @@ static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     expectedMotorNumber = 0;
     expectedMotorDirection = 1;
     updateMotors();
-    CuAssert( tc, "Should have decremented a step.", motorMovement[0].steps == 99 );
+    CuAssert( tc, "Should have taken a step.", motorMovement[0].stepsTaken == 1 );
 
     motorMovement[0].speed = 0;
     motorMovement[0].acceleration = -100;
@@ -102,14 +108,14 @@ static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     expectedMotorNumber = 0;
     expectedMotorDirection = 0;
     updateMotors();
-    CuAssert( tc, "Should have decremented a step.", motorMovement[0].steps == 98 );
+    CuAssert( tc, "Should have taken a step.", motorMovement[0].stepsTaken == 2 );
 }
 
 static void updateMotorsTest_CompleteMove( CuTest *tc ) {
     setupMotors();
     motorMovement[0].motorStatus = Accelerating;
     motorMovement[0].fractionalStep = INT32_MAX - 99;
-    motorMovement[0].steps = 1;
+    motorMovement[0].stepsTaken = 99;
 
     updateMotors();
     CuAssert( tc, "Should be done moving.", motorMovement[0].motorStatus == Idle );

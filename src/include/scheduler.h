@@ -10,6 +10,7 @@ enum MotorStatus {
 struct MotorMovement {
     enum MotorStatus motorStatus;
     uint32_t steps;
+    uint32_t stepsTaken;
     int32_t fractionalStep;
     int32_t maxSpeed;
     int32_t speed;

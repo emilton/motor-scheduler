@@ -19,6 +19,7 @@ int schedulerInit( void ) {
     for( i = 0; i < NUM_MOTORS; ++i ) {
         motorMovement[i].motorStatus = Idle;
         motorMovement[i].steps = 0;
+        motorMovement[i].stepsTaken = 0;
         motorMovement[i].fractionalStep = 0;
         motorMovement[i].maxSpeed = 0;
         motorMovement[i].speed = 0;
@@ -60,8 +61,8 @@ int updateMotors( void ) {
             if( !moveMotor( i, speedSign ) ) {
                 return 0;
             }
-            currentMotor->steps--;
-            if( !currentMotor->steps ) {
+            currentMotor->stepsTaken++;
+            if( currentMotor->stepsTaken == currentMotor->steps ) {
                 currentMotor->motorStatus = Idle;
             }
         }
