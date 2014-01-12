@@ -25,6 +25,7 @@ static void schedulerInitTest( CuTest *tc ) {
         CuAssert( tc, "Did not set the status.", motorMovement[i].motorStatus == Idle );
         CuAssert( tc, "Did not set the steps.", motorMovement[i].steps == 0 );
         CuAssert( tc, "Did not set the steps taken.", motorMovement[i].stepsTaken == 0 );
+        CuAssert( tc, "Did not set the steps taken.", motorMovement[i].deaccelerationStart == 0 );
         CuAssert( tc, "Did not set the fractionStep.", motorMovement[i].fractionalStep == 0 );
         CuAssert( tc, "Did not set the maxSpeed.", motorMovement[i].maxSpeed == 0 );
         CuAssert( tc, "Did not set the speed.", motorMovement[i].speed == 0 );
@@ -48,6 +49,7 @@ static void setupMotors( void ) {
     motorMovement[0].motorStatus = Idle;
     motorMovement[0].steps = 100;
     motorMovement[0].stepsTaken = 0;
+    motorMovement[0].deaccelerationStart = 0;
     motorMovement[0].fractionalStep = 0;
     motorMovement[0].maxSpeed = 10000;
     motorMovement[0].speed = 0;
@@ -68,13 +70,15 @@ static void updateMotorsTest_Idle( CuTest *tc ) {
 static void updateMotorsTest_Accelerating( CuTest *tc ) {
     int i;
     setupMotors();
-
     motorMovement[0].motorStatus = Accelerating;
+    motorMovement[0].stepsTaken = 25;
+
     for( i = 0; i < 100; ++i ) {
         updateMotors();
     }
     CuAssert( tc, "Speed should be max.", motorMovement[0].speed == 10000 );
     CuAssert( tc, "Should now be in constant speed mode.", motorMovement[0].motorStatus == ConstantSpeed );
+    CuAssert( tc, "Should have calculated when to start deacceleration.", motorMovement[0].deaccelerationStart == 75 );
     CuAssert( tc, "Fractional step should be 100*(100*101)/2.", motorMovement[0].fractionalStep == 505000 );
 }
 

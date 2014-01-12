@@ -43,6 +43,7 @@ int updateMotors( void ) {
                 currentMotor->speed += currentMotor->acceleration;
                 if( currentMotor->speed >= currentMotor->maxSpeed ) {
                     currentMotor->motorStatus = ConstantSpeed;
+                    currentMotor->deaccelerationStart = currentMotor->steps - currentMotor->stepsTaken;
                     currentMotor->speed = currentMotor->maxSpeed;
                 }
                 break;
