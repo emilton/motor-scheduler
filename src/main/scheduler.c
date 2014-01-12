@@ -28,6 +28,7 @@ int schedulerInit( void ) {
 
 int updateMotors( void ) {
     int i;
+    int32_t oldFractionalStep;
     MotorMovement *currentMotor;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
@@ -50,7 +51,17 @@ int updateMotors( void ) {
                 return 0;
         }
 
+        oldFractionalStep = currentMotor->fractionalStep;
         currentMotor->fractionalStep += currentMotor->speed;
+        if( oldFractionalStep > 0 && currentMotor->speed > 0 && currentMotor->fractionalStep < 0 ) {
+            if( !moveMotor( i ) ) {
+                return 0;
+            }
+        } else if( oldFractionalStep < 0 && currentMotor->speed < 0 && currentMotor->fractionalStep > 0 ) {
+            if( !moveMotor( i ) ) {
+                return 0;
+            }
+        }
     }
 
     return 1;

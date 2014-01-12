@@ -7,12 +7,12 @@
 int expectedMotorNumber;
 
 static void schedulerInitTest( CuTest *tc );
+static void moveMotorTest( CuTest *tc );
 static void setupMotors( void );
 static void updateMotorsTest_Idle( CuTest *tc );
 static void updateMotorsTest_Accelerating( CuTest *tc );
 static void updateMotorsTest_AcceleratingTriangle( CuTest *tc );
 static void updateMotorsTest_MoveMotor( CuTest *tc );
-static void moveMotorTest( CuTest *tc );
 
 static void schedulerInitTest( CuTest *tc ) {
     int i;
@@ -27,6 +27,14 @@ static void schedulerInitTest( CuTest *tc ) {
         CuAssert( tc, "Did not set the speed.", motorMovement[i].speed == 0 );
         CuAssert( tc, "Did not set the acceleration.", motorMovement[i].acceleration == 0 );
     }
+}
+
+static void moveMotorTest( CuTest *tc ) {
+    expectedMotorNumber = -1;
+    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0 ) );
+
+    expectedMotorNumber = 0;
+    CuAssert( tc, "Gave the expected motor number, should work.", moveMotor( 0 ) );
 }
 
 static void setupMotors( void ) {
@@ -62,43 +70,39 @@ static void updateMotorsTest_Accelerating( CuTest *tc ) {
 }
 
 static void updateMotorsTest_AcceleratingTriangle( CuTest *tc ) {
-    int i;
     setupMotors();
-
-    motorMovement[0].steps = 2;
-    for( i = 0; i < 100; ++i ) {
-        updateMotors();
-    }
-    CuAssert( tc, "Speed should be max.", motorMovement[0].speed == 10000 );
-    CuAssert( tc, "Should now be in constant speed mode.", motorMovement[0].motorStatus == ConstantSpeed );
-    CuAssert( tc, "Fractional step should be 100*(100*101)/2.", motorMovement[0].fractionalStep == 505000 );
+    updateMotors();
 }
 
 static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     setupMotors();
-
-    expectedMotorNumber = -1;
+    motorMovement[0].motorStatus = Accelerating;
     motorMovement[0].fractionalStep = INT32_MAX - 100;
-    updateMotors();
-}
 
-static void moveMotorTest( CuTest *tc ) {
     expectedMotorNumber = -1;
-    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0 ) );
-
+    updateMotors();
     expectedMotorNumber = 0;
-    CuAssert( tc, "Gave the expected motor number, should work.", moveMotor( 0 ) );
+    updateMotors();
+
+    motorMovement[0].speed = 0;
+    motorMovement[0].acceleration = -100;
+    motorMovement[0].fractionalStep = INT32_MIN + 100;
+
+    expectedMotorNumber = -1;
+    updateMotors();
+    expectedMotorNumber = 0;
+    updateMotors();
 }
 
 CuSuite* CuGetSuite( void ) {
     CuSuite* suite = CuSuiteNew();
 
     SUITE_ADD_TEST( suite, schedulerInitTest );
+    SUITE_ADD_TEST( suite, moveMotorTest );
     SUITE_ADD_TEST( suite, updateMotorsTest_Idle );
     SUITE_ADD_TEST( suite, updateMotorsTest_Accelerating );
     SUITE_ADD_TEST( suite, updateMotorsTest_AcceleratingTriangle );
     SUITE_ADD_TEST( suite, updateMotorsTest_MoveMotor );
-    SUITE_ADD_TEST( suite, moveMotorTest );
 
     return suite;
 }
