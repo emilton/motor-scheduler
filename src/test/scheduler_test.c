@@ -14,6 +14,7 @@ static void updateMotorsTest_Idle( CuTest *tc );
 static void updateMotorsTest_Accelerating( CuTest *tc );
 static void updateMotorsTest_AcceleratingTriangle( CuTest *tc );
 static void updateMotorsTest_Deaccelerating( CuTest *tc );
+static void updateMotorsTest_ConstantSpeed( CuTest *tc );
 static void updateMotorsTest_MoveMotor( CuTest *tc );
 static void updateMotorsTest_CompleteMove( CuTest *tc );
 
@@ -102,6 +103,18 @@ static void updateMotorsTest_Deaccelerating( CuTest *tc ) {
     CuAssert( tc, "Should have decremented fractionalStep.", motorMovement[0].fractionalStep == -100 );
 }
 
+static void updateMotorsTest_ConstantSpeed( CuTest *tc ) {
+    setupMotors();
+    motorMovement[0].motorStatus = ConstantSpeed;
+    motorMovement[0].stepsTaken = 74;
+    motorMovement[0].deaccelerationStart = 75;
+    motorMovement[0].fractionalStep = INT32_MAX - 99;
+    motorMovement[0].speed = 100;
+
+    updateMotors();
+    CuAssert( tc, "Should have started deacceleration.", motorMovement[0].motorStatus == Deaccelerating );
+}
+
 static void updateMotorsTest_MoveMotor( CuTest *tc ) {
     setupMotors();
     motorMovement[0].motorStatus = Accelerating;
@@ -145,6 +158,7 @@ CuSuite* CuGetSuite( void ) {
     SUITE_ADD_TEST( suite, updateMotorsTest_Accelerating );
     SUITE_ADD_TEST( suite, updateMotorsTest_AcceleratingTriangle );
     SUITE_ADD_TEST( suite, updateMotorsTest_Deaccelerating );
+    SUITE_ADD_TEST( suite, updateMotorsTest_ConstantSpeed );
     SUITE_ADD_TEST( suite, updateMotorsTest_MoveMotor );
     SUITE_ADD_TEST( suite, updateMotorsTest_CompleteMove );
 

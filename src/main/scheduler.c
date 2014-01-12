@@ -67,6 +67,9 @@ int updateMotors( void ) {
             if( currentMotor->motorStatus == Accelerating && currentMotor->stepsTaken >= ( currentMotor->steps >> 1 ) ) {
                 currentMotor->motorStatus = Deaccelerating;
             }
+            if( currentMotor->motorStatus == ConstantSpeed && currentMotor->stepsTaken >= currentMotor->deaccelerationStart ) {
+                currentMotor->motorStatus = Deaccelerating;
+            }
             if( currentMotor->stepsTaken == currentMotor->steps ) {
                 currentMotor->motorStatus = Idle;
             }
