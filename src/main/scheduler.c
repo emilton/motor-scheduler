@@ -79,7 +79,13 @@ static int moveMotor( int motorNumber, int forwardDirection ) {
     }
 #else
     if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
-        return 1;
+        if( forwardDirection ) {
+            /* Move motor forward. */
+            return 1;
+        } else {
+            /* Move motor backward. */
+            return 1;
+        }
     } else {
         return 0;
     }
