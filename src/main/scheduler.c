@@ -24,19 +24,18 @@ int schedulerInit( void ) {
 
 int updateMotors( void ) {
     int i;
-    char oldSign, speedSign;
     MotorMovement *motor;
+    int32_t oldFractionalStep;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
         motor = &motorMovement[i];
         if( motor->steps ) {
             motor->speed += motor->acceleration;
 
-            oldSign = sign( motor->fractionalStep );
-            speedSign = sign( motor->speed );
+            oldFractionalStep = motor->fractionalStep;
             motor->fractionalStep += motor->speed;
-            if( oldSign != sign( motor->fractionalStep ) && oldSign == speedSign ) {
-                if( !moveMotor( i, speedSign ) ) {
+            if( ( motor->fractionalStep ^ motor->speed ) & ( motor->fractionalStep ^ oldFractionalStep ) & 0x80000000 ) {
+                if( !moveMotor( i, sign( motor->speed ) ) ) {
                     return 0;
                 }
                 motor->steps--;
