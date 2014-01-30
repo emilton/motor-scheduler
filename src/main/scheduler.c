@@ -7,11 +7,6 @@
 
 static MotorMovement motorMovement[NUM_MOTORS];
 
-#ifdef TEST
-extern int expectedMotorNumber;
-extern int expectedMotorDirection;
-#endif
-
 static int moveMotor( int, int );
 
 int schedulerInit( void ) {
@@ -52,14 +47,8 @@ int updateMotors( void ) {
     return 1;
 }
 
+#ifndef TEST
 static int moveMotor( int motorNumber, int forwardDirection ) {
-#ifdef TEST
-    if( expectedMotorNumber < 0 || expectedMotorDirection < 0 ) {
-        return 0;
-    } else {
-        return motorNumber == expectedMotorNumber && forwardDirection == expectedMotorDirection;
-    }
-#else
     if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
         if( forwardDirection ) {
             /* Move motor forward. */
@@ -71,5 +60,5 @@ static int moveMotor( int motorNumber, int forwardDirection ) {
     } else {
         return 0;
     }
-#endif
 }
+#endif
