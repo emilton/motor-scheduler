@@ -7,6 +7,8 @@
 
 static MotorMovement motorMovement[NUM_MOTORS];
 
+static void applyAcceleration( Accelerating_t *accelerating );
+static void applyConstantSpeed( ConstantSpeed_t *constantSpeed );
 static int moveMotor( int, int );
 
 int schedulerInit( void ) {
@@ -44,6 +46,40 @@ int updateMotors( void ) {
     }
 
     return 1;
+}
+
+int applyCommand( Command_t *command ) {
+    switch( command->commandType ) {
+        case Accelerating:
+            applyAcceleration( &command->command.accelerating );
+            break;
+        case ConstantSpeed:
+            applyConstantSpeed( &command->command.constantSpeed );
+            break;
+        default:
+            return 0;
+    }
+
+    return 1;
+}
+
+static void applyAcceleration( Accelerating_t *accelerating ) {
+    int i;
+
+    for( i = 0; i < NUM_MOTORS; i++ ) {
+        motorMovement[i].steps = accelerating->steps[i];
+        motorMovement[i].acceleration = accelerating->accelerations[i];
+    }
+}
+
+static void applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
+    int i;
+
+    for( i = 0; i < NUM_MOTORS; i++ ) {
+        motorMovement[i].steps = constantSpeed->steps[i];
+        motorMovement[i].acceleration = 0;
+        motorMovement[i].speed = constantSpeed->speeds[i];
+    }
 }
 
 #ifndef TEST

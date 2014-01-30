@@ -16,6 +16,8 @@ static void updateMotorsTest_Accelerating( CuTest *tc );
 static void updateMotorsTest_ConstantSpeed( CuTest *tc );
 static void updateMotorsTest_MoveMotor( CuTest *tc );
 static void updateMotorsTest_CompleteMove( CuTest *tc );
+static void applyAccelerationTest( CuTest *tc );
+static void applySpeedTest( CuTest *tc );
 
 static void schedulerInitTest( CuTest *tc ) {
     int i;
@@ -112,6 +114,21 @@ static void updateMotorsTest_CompleteMove( CuTest *tc ) {
 
 }
 
+static void applyAccelerationTest( CuTest *tc ) {
+    Command_t command = {Accelerating, {{{100}, {200}}}};
+
+    CuAssert( tc, "Should have applied command successfully.", applyCommand( &command ) );
+    CuAssert( tc, "Should have set acceleration and speed.", motorMovement[0].steps == 100 && motorMovement[0].acceleration == 200 );
+}
+
+static void applySpeedTest( CuTest *tc ) {
+    Command_t command = {ConstantSpeed, {{{100}, {200}}}};
+
+    CuAssert( tc, "Should have applied command successfully.", applyCommand( &command ) );
+    CuAssert( tc, "Should have set acceleration and speed.",
+    motorMovement[0].steps == 100 && motorMovement[0].speed == 200 && motorMovement[0].acceleration == 0 );
+}
+
 CuSuite* CuGetSuite( void ) {
     CuSuite* suite = CuSuiteNew();
 
@@ -121,6 +138,8 @@ CuSuite* CuGetSuite( void ) {
     SUITE_ADD_TEST( suite, updateMotorsTest_ConstantSpeed );
     SUITE_ADD_TEST( suite, updateMotorsTest_MoveMotor );
     SUITE_ADD_TEST( suite, updateMotorsTest_CompleteMove );
+    SUITE_ADD_TEST( suite, applyAccelerationTest );
+    SUITE_ADD_TEST( suite, applySpeedTest );
 
     return suite;
 }
