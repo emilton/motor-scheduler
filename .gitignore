@@ -10,4 +10,5 @@ lib/*.o
 28027_RAM_lnk.cmd
 Debug
 targetConfigs/
+.launches/
 
