@@ -17,7 +17,9 @@ static interrupt void toggleLedsInterrupt( void );
 
 CLK_Handle myClk;
 CPU_Handle myCpu;
+#ifdef _FLASH
 FLASH_Handle myFlash;
+#endif
 GPIO_Handle myGpio;
 PIE_Handle myPie;
 PLL_Handle myPll;
@@ -37,7 +39,9 @@ void main( void ) {
 static void initializeHandles( void ) {
     myClk = CLK_init( (void * )CLK_BASE_ADDR, sizeof( CLK_Obj ));
     myCpu = CPU_init( (void * )NULL, sizeof( CPU_Obj ));
+#ifdef _FLASH
     myFlash = FLASH_init( (void * )FLASH_BASE_ADDR, sizeof( FLASH_Obj ));
+#endif
     myGpio = GPIO_init( (void * )GPIO_BASE_ADDR, sizeof( GPIO_Obj ));
     myPie = PIE_init( (void * )PIE_BASE_ADDR, sizeof( PIE_Obj ));
     myPll = PLL_init( (void * )PLL_BASE_ADDR, sizeof( PLL_Obj ));
@@ -67,7 +71,9 @@ static void initializeHandles( void ) {
 #endif
 
     // Setup a debug vector table and enable the PIE
+#ifdef _DEBUG
     PIE_setDebugIntVectorTable( myPie );
+#endif
     PIE_enable( myPie );
 }
 
