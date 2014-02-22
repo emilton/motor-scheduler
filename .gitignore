@@ -3,12 +3,12 @@
 *.stackdump
 target/
 lib/*.o
+Debug/
+Release/
 .ccsproject
 .cproject
 .project
 .settings/
-28027_RAM_lnk.cmd
-Debug
 targetConfigs/
 .launches/
 
