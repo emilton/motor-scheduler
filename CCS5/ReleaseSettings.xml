@@ -3,26 +3,26 @@
 <section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.IncludePaths">
 <language name="C Source File">
 <includepath workspace_path="true">/${ProjName}/src/include</includepath>
-<includepath>${CG_TOOL_ROOT}\include\</includepath>
-<includepath>${INSTALLROOT_F2802x}\</includepath>
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${INSTALLROOT_F2802x}</includepath>
 
 </language>
 <language name="Assembly Source File">
 <includepath workspace_path="true">/${ProjName}/src/include</includepath>
-<includepath>${CG_TOOL_ROOT}\include\</includepath>
-<includepath>${INSTALLROOT_F2802x}\</includepath>
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${INSTALLROOT_F2802x}</includepath>
 
 </language>
 <language name="Assembly Source File">
 <includepath workspace_path="true">/${ProjName}/src/include</includepath>
-<includepath>${CG_TOOL_ROOT}\include\</includepath>
-<includepath>${INSTALLROOT_F2802x}\</includepath>
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${INSTALLROOT_F2802x}</includepath>
 
 </language>
 <language name="C++ Source File">
 <includepath workspace_path="true">/${ProjName}/src/include</includepath>
-<includepath>${CG_TOOL_ROOT}\include\</includepath>
-<includepath>${INSTALLROOT_F2802x}\</includepath>
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${INSTALLROOT_F2802x}</includepath>
 
 </language>
 <language name="Linker Command File">
