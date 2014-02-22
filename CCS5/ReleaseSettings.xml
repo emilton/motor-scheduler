@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cdtprojectproperties>
+<section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.IncludePaths">
+<language name="C++ Source File">
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${XDAIS_CG_ROOT}/packages/ti/xdais</includepath>
+<includepath>${INSTALLROOT_F2802x0_V110}</includepath>
+<includepath>${INSTALLROOT_2802X_TO_IQMATH}/v15c/include</includepath>
+
+</language>
+<language name="C Source File">
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${XDAIS_CG_ROOT}/packages/ti/xdais</includepath>
+<includepath>${INSTALLROOT_F2802x0_V110}</includepath>
+<includepath>${INSTALLROOT_2802X_TO_IQMATH}/v15c/include</includepath>
+
+</language>
+<language name="Assembly Source File">
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${XDAIS_CG_ROOT}/packages/ti/xdais</includepath>
+<includepath>${INSTALLROOT_F2802x0_V110}</includepath>
+<includepath>${INSTALLROOT_2802X_TO_IQMATH}/v15c/include</includepath>
+
+</language>
+<language name="Assembly Source File">
+<includepath>${CG_TOOL_ROOT}/include</includepath>
+<includepath>${XDAIS_CG_ROOT}/packages/ti/xdais</includepath>
+<includepath>${INSTALLROOT_F2802x0_V110}</includepath>
+<includepath>${INSTALLROOT_2802X_TO_IQMATH}/v15c/include</includepath>
+
+</language>
+<language name="Linker Command File">
+
+</language>
+<language name="Linker Command File">
+
+</language>
+<language name="Linker Command File">
+
+</language>
+</section>
+<section name="org.eclipse.cdt.internal.ui.wizards.settingswizards.Macros">
+<language name="C++ Source File">
+<macro>
+<name>_DEBUG</name><value/>
+</macro>
+<macro>
+<name>_FLASH</name><value/>
+</macro>
+<macro>
+<name>LARGE_MODEL</name><value/>
+</macro>
+
+</language>
+<language name="C Source File">
+<macro>
+<name>_DEBUG</name><value/>
+</macro>
+<macro>
+<name>_FLASH</name><value/>
+</macro>
+<macro>
+<name>LARGE_MODEL</name><value/>
+</macro>
+
+</language>
+<language name="Assembly Source File">
+<macro>
+<name>_DEBUG</name><value/>
+</macro>
+<macro>
+<name>_FLASH</name><value/>
+</macro>
+<macro>
+<name>LARGE_MODEL</name><value/>
+</macro>
+
+</language>
+<language name="Assembly Source File">
+<macro>
+<name>_DEBUG</name><value/>
+</macro>
+<macro>
+<name>_FLASH</name><value/>
+</macro>
+<macro>
+<name>LARGE_MODEL</name><value/>
+</macro>
+
+</language>
+<language name="Linker Command File">
+
+</language>
+<language name="Linker Command File">
+
+</language>
+<language name="Linker Command File">
+
+</language>
+</section>
+</cdtprojectproperties>
