@@ -10,6 +10,8 @@
 
 #include "scheduler.h"
 
+#pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
+
 static void initializeHandles( void );
 static void initializeTimerInterrupt( void );
 static void initializeGpio( void );
@@ -117,8 +119,13 @@ static void initializeGpio( void ) {
 
     GPIO_setLow( myGpio, GPIO_Number_0 );
     GPIO_setHigh( myGpio, GPIO_Number_1 );
+#ifdef _FLASH
+    GPIO_setHigh( myGpio, GPIO_Number_2 );
+    GPIO_setLow( myGpio, GPIO_Number_3 );
+#else
     GPIO_setLow( myGpio, GPIO_Number_2 );
     GPIO_setHigh( myGpio, GPIO_Number_3 );
+#endif
 }
 
 static interrupt void toggleLedsInterrupt( void ) {
