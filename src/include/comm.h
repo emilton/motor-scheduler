@@ -1,8 +1,9 @@
 #define NUM_MOTORS 3
 
 enum CommandType {
-    ConstantSpeed = 0,
-    Accelerating = 1
+    NoOp = 0,
+    ConstantSpeed = 1,
+    Accelerating = 2
 };
 
 typedef struct Accelerating_t Accelerating_t;
