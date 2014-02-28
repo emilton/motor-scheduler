@@ -32,22 +32,18 @@ TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 
 void main( void ) {
-	uint8_t sendData = 0, readData;
+    uint8_t readData;
 
     handlesInit();
     gpioInit();
     spiInit();
     interruptInit();
 
-	for( ;; ) {
-		SPI_write8( mySpi, sendData );
-
-		while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-
-		readData = SPI_read( mySpi );
-
-		sendData = readData + 1;
-	}
+    for( ;; ) {
+        while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+        readData = SPI_read( mySpi );
+        SPI_write8( mySpi, readData );
+    }
 }
 
 static void handlesInit( void ) {
@@ -125,31 +121,23 @@ static void gpioInit( void ) {
 
 static void spiInit( void ) {
     SPI_reset( mySpi );
-    SPI_enable( mySpi );
 
     SPI_setCharLength( mySpi, SPI_CharLength_8_Bits );
-    SPI_enableLoopBack( mySpi );
-
-    // Enable master mode, normal phase,
-    // enable talk, and SPI int disabled.
-    SPI_setMode( mySpi, SPI_Mode_Master );
+    SPI_setMode( mySpi, SPI_Mode_Slave );
     SPI_enableTx( mySpi );
-
-    SPI_setBaudRate( mySpi, ( SPI_BaudRate_e )0x63 );
+    SPI_setTxDelay( mySpi, 0 );
 
     // Initialize SPI FIFO registers
     SPI_enableFifoEnh( mySpi );
     SPI_enableChannels( mySpi );
     SPI_resetTxFifo( mySpi );
     SPI_resetRxFifo( mySpi );
-
-    SPI_setTxDelay( mySpi, 0 );
+    SPI_enableTxFifo( mySpi );
+    SPI_enableRxFifo( mySpi );
 
     // Set so breakpoints don't disturb transmission
     SPI_setPriority( mySpi, SPI_Priority_FreeRun );
 
-    SPI_enableTxFifo( mySpi );
-    SPI_enableRxFifo( mySpi );
     SPI_enable( mySpi );
 }
 
