@@ -12,16 +12,12 @@
 #include "scheduler.h"
 
 #pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
-#pragma CODE_SECTION( spiTxInterrupt, "ramfuncs" );
-#pragma CODE_SECTION( spiRxInterrupt, "ramfuncs" );
 
 static void handlesInit( void );
 static void gpioInit( void );
 static void spiInit( void );
 static void interruptInit( void );
 static interrupt void toggleLedsInterrupt( void );
-static interrupt void spiTxInterrupt( void );
-static interrupt void spiRxInterrupt( void );
 
 CLK_Handle myClk;
 CPU_Handle myCpu;
@@ -36,14 +32,25 @@ TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 
 void main( void ) {
+	uint16_t sendData = 0, readData;
+
     handlesInit();
     gpioInit();
     spiInit();
     interruptInit();
 
-    for( ;; ){
-        asm( "NOP" );
-    }
+	for( ;; ) {
+		SPI_write( mySpi, sendData );
+
+		while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+
+		readData = SPI_read( mySpi );
+		if( readData != sendData ) {
+			readData = 0xFFFF;
+		}
+
+		sendData++;
+	}
 }
 
 static void handlesInit( void ) {
@@ -96,20 +103,14 @@ static void gpioInit( void ) {
     GPIO_setMode( myGpio, GPIO_Number_1, GPIO_0_Mode_GeneralPurpose );
     GPIO_setMode( myGpio, GPIO_Number_2, GPIO_0_Mode_GeneralPurpose );
     GPIO_setMode( myGpio, GPIO_Number_3, GPIO_0_Mode_GeneralPurpose );
-
     GPIO_setDirection( myGpio, GPIO_Number_0, GPIO_Direction_Output );
     GPIO_setDirection( myGpio, GPIO_Number_1, GPIO_Direction_Output );
     GPIO_setDirection( myGpio, GPIO_Number_2, GPIO_Direction_Output );
     GPIO_setDirection( myGpio, GPIO_Number_3, GPIO_Direction_Output );
-
     GPIO_setLow( myGpio, GPIO_Number_0 );
     GPIO_setHigh( myGpio, GPIO_Number_1 );
-#ifdef _FLASH
     GPIO_setHigh( myGpio, GPIO_Number_2 );
     GPIO_setLow( myGpio, GPIO_Number_3 );
-#else
-    GPIO_setLow( myGpio, GPIO_Number_2 );
-    GPIO_setHigh( myGpio, GPIO_Number_3 );
 
     GPIO_setPullUp( myGpio, GPIO_Number_16, GPIO_PullUp_Enable );
     GPIO_setPullUp( myGpio, GPIO_Number_17, GPIO_PullUp_Enable );
@@ -123,7 +124,6 @@ static void gpioInit( void ) {
     GPIO_setMode( myGpio, GPIO_Number_17, GPIO_17_Mode_SPISOMIA );
     GPIO_setMode( myGpio, GPIO_Number_18, GPIO_18_Mode_SPICLKA );
     GPIO_setMode( myGpio, GPIO_Number_19, GPIO_19_Mode_SPISTEA_NOT );
-#endif
 }
 
 static void spiInit( void ) {
@@ -137,8 +137,6 @@ static void spiInit( void ) {
     // enable talk, and SPI int disabled.
     SPI_setMode( mySpi, SPI_Mode_Master );
     SPI_enableTx( mySpi );
-    SPI_enableOverRunInt( mySpi );
-    SPI_enableInt( mySpi );
 
     SPI_setBaudRate( mySpi, ( SPI_BaudRate_e )0x63 );
 
@@ -146,31 +144,21 @@ static void spiInit( void ) {
     SPI_enableFifoEnh( mySpi );
     SPI_enableChannels( mySpi );
     SPI_resetTxFifo( mySpi );
-    SPI_clearTxFifoInt( mySpi );
-    SPI_setTxFifoIntLevel( mySpi, SPI_FifoLevel_2_Words );
-    SPI_enableTxFifoInt( mySpi );
-
     SPI_resetRxFifo( mySpi );
-    SPI_setRxFifoIntLevel( mySpi, SPI_FifoLevel_2_Words );
-    SPI_enableRxFifoInt( mySpi );
-    SPI_clearRxFifoInt( mySpi );
 
     SPI_setTxDelay( mySpi, 0 );
 
-    // Set so breakpoints don't disturb xmission
+    // Set so breakpoints don't disturb transmission
     SPI_setPriority( mySpi, SPI_Priority_FreeRun );
-
-    SPI_enable( mySpi );
 
     SPI_enableTxFifo( mySpi );
     SPI_enableRxFifo( mySpi );
+    SPI_enable( mySpi );
 }
 
 static void interruptInit( void ) {
     // Register interrupt handlers in the PIE vector table
     PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&toggleLedsInterrupt );
-    PIE_registerPieIntHandler( myPie, PIE_GroupNumber_6, PIE_SubGroupNumber_1, ( intVec_t )&spiRxInterrupt );
-    PIE_registerPieIntHandler( myPie, PIE_GroupNumber_6, PIE_SubGroupNumber_2, ( intVec_t )&spiTxInterrupt );
 
     // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
     // 60MHz CPU Freq, 50 millisecond Period ( in uSeconds )
@@ -184,11 +172,7 @@ static void interruptInit( void ) {
     TIMER_start( myTimer );
 
     CPU_enableInt( myCpu, CPU_IntNumber_1 );
-    CPU_enableInt( myCpu, CPU_IntNumber_6 );
-
     PIE_enableTimer0Int( myPie );
-    PIE_enableInt( myPie, PIE_GroupNumber_6, PIE_InterruptSource_SPIARX );
-    PIE_enableInt( myPie, PIE_GroupNumber_6, PIE_InterruptSource_SPIATX );
 
     // Enable global Interrupts and higher priority real-time debug events
     CPU_enableGlobalInts( myCpu );
@@ -203,23 +187,4 @@ static interrupt void toggleLedsInterrupt( void ) {
 
     // Acknowledge this interrupt to receive more interrupts from group 1
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
-}
-
-interrupt void spiTxInterrupt( void ) {
-    SPI_write( mySpi, 0xAAAA );
-    SPI_write( mySpi, 0x5555 );
-
-    SPI_clearTxFifoInt( mySpi );
-    PIE_clearInt( myPie, PIE_GroupNumber_6 );
-}
-
-interrupt void spiRxInterrupt( void ) {
-    uint16_t readData[2];
-    readData[0] = SPI_read( mySpi );
-    readData[1] = SPI_read( mySpi );
-    SPI_clearRxFifoOvf( mySpi );
-
-    SPI_clearRxFifoInt( mySpi );
-    PIE_clearInt( myPie, PIE_GroupNumber_6 );
-    return;
 }
