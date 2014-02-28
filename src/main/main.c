@@ -123,6 +123,8 @@ static void spiInit( void ) {
     SPI_reset( mySpi );
 
     SPI_setCharLength( mySpi, SPI_CharLength_8_Bits );
+    SPI_setClkPhase( mySpi, SPI_ClkPhase_Normal );
+    SPI_setClkPolarity( mySpi, SPI_ClkPolarity_OutputFallingEdge_InputRisingEdge );
     SPI_setMode( mySpi, SPI_Mode_Slave );
     SPI_enableTx( mySpi );
     SPI_setTxDelay( mySpi, 0 );
