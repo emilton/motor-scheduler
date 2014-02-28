@@ -32,7 +32,7 @@ TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 
 void main( void ) {
-	uint16_t sendData = 0, readData;
+	uint8_t sendData = 0, readData;
 
     handlesInit();
     gpioInit();
@@ -40,16 +40,13 @@ void main( void ) {
     interruptInit();
 
 	for( ;; ) {
-		SPI_write( mySpi, sendData );
+		SPI_write8( mySpi, sendData );
 
 		while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
 
 		readData = SPI_read( mySpi );
-		if( readData != sendData ) {
-			readData = 0xFFFF;
-		}
 
-		sendData++;
+		sendData = readData + 1;
 	}
 }
 
@@ -130,7 +127,7 @@ static void spiInit( void ) {
     SPI_reset( mySpi );
     SPI_enable( mySpi );
 
-    SPI_setCharLength( mySpi, SPI_CharLength_16_Bits );
+    SPI_setCharLength( mySpi, SPI_CharLength_8_Bits );
     SPI_enableLoopBack( mySpi );
 
     // Enable master mode, normal phase,
