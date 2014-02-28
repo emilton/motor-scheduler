@@ -12,9 +12,9 @@
 
 #pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
 
-static void initializeHandles( void );
-static void initializeTimerInterrupt( void );
-static void initializeGpio( void );
+static void handlesInit( void );
+static void gpioInit( void );
+static void interruptInit( void );
 static interrupt void toggleLedsInterrupt( void );
 
 CLK_Handle myClk;
@@ -29,16 +29,16 @@ TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 
 void main( void ) {
-    initializeHandles();
-    initializeGpio();
-    initializeTimerInterrupt();
+    handlesInit();
+    gpioInit();
+    interruptInit();
 
     for( ;; ){
         asm( "NOP" );
     }
 }
 
-static void initializeHandles( void ) {
+static void handlesInit( void ) {
     myClk = CLK_init( (void * )CLK_BASE_ADDR, sizeof( CLK_Obj ));
     myCpu = CPU_init( (void * )NULL, sizeof( CPU_Obj ));
 #ifdef _FLASH
@@ -79,7 +79,29 @@ static void initializeHandles( void ) {
     PIE_enable( myPie );
 }
 
-static void initializeTimerInterrupt( void ) {
+static void gpioInit( void ) {
+    GPIO_setMode( myGpio, GPIO_Number_0, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, GPIO_Number_1, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, GPIO_Number_2, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, GPIO_Number_3, GPIO_0_Mode_GeneralPurpose );
+
+    GPIO_setDirection( myGpio, GPIO_Number_0, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, GPIO_Number_1, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, GPIO_Number_2, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, GPIO_Number_3, GPIO_Direction_Output );
+
+    GPIO_setLow( myGpio, GPIO_Number_0 );
+    GPIO_setHigh( myGpio, GPIO_Number_1 );
+#ifdef _FLASH
+    GPIO_setHigh( myGpio, GPIO_Number_2 );
+    GPIO_setLow( myGpio, GPIO_Number_3 );
+#else
+    GPIO_setLow( myGpio, GPIO_Number_2 );
+    GPIO_setHigh( myGpio, GPIO_Number_3 );
+#endif
+}
+
+static void interruptInit( void ) {
     // Register interrupt handlers in the PIE vector table
     PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&toggleLedsInterrupt );
 
@@ -104,28 +126,6 @@ static void initializeTimerInterrupt( void ) {
     // Enable global Interrupts and higher priority real-time debug events
     CPU_enableGlobalInts( myCpu );
     CPU_enableDebugInt( myCpu );
-}
-
-static void initializeGpio( void ) {
-    GPIO_setMode( myGpio, GPIO_Number_0, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_1, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_2, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_3, GPIO_0_Mode_GeneralPurpose );
-
-    GPIO_setDirection( myGpio, GPIO_Number_0, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_1, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_2, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_3, GPIO_Direction_Output );
-
-    GPIO_setLow( myGpio, GPIO_Number_0 );
-    GPIO_setHigh( myGpio, GPIO_Number_1 );
-#ifdef _FLASH
-    GPIO_setHigh( myGpio, GPIO_Number_2 );
-    GPIO_setLow( myGpio, GPIO_Number_3 );
-#else
-    GPIO_setLow( myGpio, GPIO_Number_2 );
-    GPIO_setHigh( myGpio, GPIO_Number_3 );
-#endif
 }
 
 static interrupt void toggleLedsInterrupt( void ) {
