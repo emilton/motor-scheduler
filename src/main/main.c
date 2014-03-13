@@ -1,3 +1,5 @@
+#include <limits.h>
+
 #include "DSP28x_Project.h"
 
 #include "f2802x_common/include/clk.h"
@@ -9,10 +11,13 @@
 #include "f2802x_common/include/timer.h"
 #include "f2802x_common/include/wdog.h"
 
+#include "comm.h"
 #include "scheduler.h"
 
+#pragma CODE_SECTION( commandReceive, "ramfuncs" );
 #pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
 
+static void commandReceive( void );
 static void handlesInit( void );
 static void gpioInit( void );
 static void spiInit( void );
@@ -32,17 +37,32 @@ TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 
 void main( void ) {
-    uint8_t readData;
-
     handlesInit();
     gpioInit();
     spiInit();
     interruptInit();
+    commandReceive();
+}
+
+static void commandReceive( void ) {
+    uint16_t command[ sizeof( Command_t ) ];
+    uint8_t readData;
+    size_t i = sizeof( uint8_t ), j;
 
     for( ;; ) {
+        for( i = 0; i < sizeof( Command_t ); i++ ) {
+            for( j = 0; j < 2; j++ ) {
+                command[i] >>= 8;
+                while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+                readData = SPI_read( mySpi );
+                SPI_write8( mySpi, readData );
+                command[i] |= ( readData << 8 );
+            }
+        }
         while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
         readData = SPI_read( mySpi );
         SPI_write8( mySpi, readData );
+        applyCommand( ( Command_t* )( command ) );
     }
 }
 
@@ -138,7 +158,7 @@ static void spiInit( void ) {
     SPI_enableRxFifo( mySpi );
 
     // Set so breakpoints don't disturb transmission
-    SPI_setPriority( mySpi, SPI_Priority_FreeRun );
+    SPI_setPriority( mySpi, SPI_Priority_Immediate );
 
     SPI_enable( mySpi );
 }
