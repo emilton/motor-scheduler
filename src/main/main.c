@@ -15,9 +15,11 @@
 #include "scheduler.h"
 
 #pragma CODE_SECTION( commandReceive, "ramfuncs" );
+#pragma CODE_SECTION( readSpi, "ramfuncs" );
 #pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
 
 static void commandReceive( void );
+static uint8_t readSpi( void );
 static void handlesInit( void );
 static void gpioInit( void );
 static void spiInit( void );
@@ -53,17 +55,24 @@ static void commandReceive( void ) {
         for( i = 0; i < sizeof( Command_t ); i++ ) {
             for( j = 0; j < 2; j++ ) {
                 command[i] >>= 8;
-                while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-                readData = SPI_read( mySpi );
-                SPI_write8( mySpi, readData );
+                readData = readSpi();
                 command[i] |= ( readData << 8 );
             }
         }
         while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-        readData = SPI_read( mySpi );
-        SPI_write8( mySpi, readData );
+        readSpi();
         applyCommand( ( Command_t* )( command ) );
     }
+}
+
+static uint8_t readSpi( void ) {
+    uint8_t readData;
+
+    while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+    readData = SPI_read( mySpi );
+    SPI_write8( mySpi, readData );
+
+    return readData;
 }
 
 static void handlesInit( void ) {
