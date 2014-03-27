@@ -1,4 +1,4 @@
-objects = main scheduler
+objects = scheduler
 main_incl = scheduler
 scheduler_incl = scheduler
 
@@ -31,7 +31,6 @@ $(call testexe,$1): $(call test,$1) $(call code,$1) $(call incl,$($1_incl)) $(ca
 endef
 
 all: target $(call targ,$(objects)) $(call testexe,$(objects_no_main)) $(call lib,$(all_libs))
-	$(cc) target/scheduler $(call targ,$(objects)) $(call lib,$(all_libs))
 
 target:
 	mkdir target

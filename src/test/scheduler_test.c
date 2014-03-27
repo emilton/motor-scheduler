@@ -144,7 +144,7 @@ CuSuite* CuGetSuite( void ) {
     return suite;
 }
 
-static int moveMotor( int motorNumber, int forwardDirection ) {
+int moveMotor( int motorNumber, int forwardDirection ) {
     if( expectedMotorNumber < 0 || expectedMotorDirection < 0 ) {
         return 0;
     } else {
