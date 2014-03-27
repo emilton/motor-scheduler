@@ -1,6 +1,7 @@
 #include <limits.h>
 
 #include "DSP28x_Project.h"
+#include "F2802x_Device.h"
 
 #include "f2802x_common/include/clk.h"
 #include "f2802x_common/include/flash.h"
@@ -13,6 +14,21 @@
 
 #include "comm.h"
 #include "scheduler.h"
+
+#define X_STEP GPIO_Number_0
+#define Y_STEP GPIO_Number_2
+#define Z_STEP GPIO_Number_7
+#define A_STEP GPIO_Number_5
+#define X_DIRECTION 4
+#define Y_DIRECTION 6
+#define Z_DIRECTION GPIO_Number_1
+#define A_DIRECTION GPIO_Number_6
+#define X_HOME GPIO_Number_4
+#define Y_HOME GPIO_Number_3
+#define Z_HOME GPIO_Number_32
+#define A_HOME GPIO_Number_33
+#define DRIVER_ENABLE 2
+#define FAULT GPIO_Number_12
 
 #pragma CODE_SECTION( commandReceive, "ramfuncs" );
 #pragma CODE_SECTION( readSpi, "ramfuncs" );
@@ -121,18 +137,39 @@ static void handlesInit( void ) {
 }
 
 static void gpioInit( void ) {
-    GPIO_setMode( myGpio, GPIO_Number_0, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_1, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_2, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_3, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setDirection( myGpio, GPIO_Number_0, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_1, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_2, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_3, GPIO_Direction_Output );
-    GPIO_setLow( myGpio, GPIO_Number_0 );
-    GPIO_setHigh( myGpio, GPIO_Number_1 );
-    GPIO_setHigh( myGpio, GPIO_Number_2 );
-    GPIO_setLow( myGpio, GPIO_Number_3 );
+    GPIO_setMode( myGpio, X_STEP, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, Y_STEP, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, Z_STEP, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, A_STEP, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, X_HOME, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, Y_HOME, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, Z_HOME, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, A_HOME, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, Z_DIRECTION, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, A_DIRECTION, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setMode( myGpio, FAULT, GPIO_0_Mode_GeneralPurpose );
+    GPIO_setDirection( myGpio, X_STEP, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, Y_STEP, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, Z_STEP, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, A_STEP, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, X_HOME, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, Y_HOME, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, Z_HOME, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, A_HOME, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, Z_DIRECTION, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, A_DIRECTION, GPIO_Direction_Output );
+    GPIO_setDirection( myGpio, FAULT, GPIO_Direction_Input );
+    GPIO_setHigh( myGpio, X_STEP );
+    GPIO_setHigh( myGpio, Y_STEP );
+    GPIO_setHigh( myGpio, Z_STEP );
+    GPIO_setHigh( myGpio, A_STEP );
+    GPIO_setHigh( myGpio, Z_DIRECTION );
+    GPIO_setHigh( myGpio, A_DIRECTION );
+
+    ENABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
+    ( ( GPIO_Obj * )myGpio )->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
+    ( ( GPIO_Obj * )myGpio )->AIOSET = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
+    DISABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
 
     GPIO_setPullUp( myGpio, GPIO_Number_16, GPIO_PullUp_Enable );
     GPIO_setPullUp( myGpio, GPIO_Number_17, GPIO_PullUp_Enable );
@@ -196,10 +233,10 @@ static void interruptInit( void ) {
 }
 
 static interrupt void toggleLedsInterrupt( void ) {
-    GPIO_toggle( myGpio, GPIO_Number_0 );
-    GPIO_toggle( myGpio, GPIO_Number_1 );
-    GPIO_toggle( myGpio, GPIO_Number_2 );
-    GPIO_toggle( myGpio, GPIO_Number_3 );
+    GPIO_toggle( myGpio, X_STEP );
+    GPIO_toggle( myGpio, Y_STEP );
+    GPIO_toggle( myGpio, Z_STEP );
+    GPIO_toggle( myGpio, A_STEP );
 
     // Acknowledge this interrupt to receive more interrupts from group 1
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
