@@ -10,4 +10,4 @@ struct MotorMovement {
 int schedulerInit( void );
 int applyCommand( Command_t *command );
 int updateMotors( void );
-
+int moveMotor( int motorNumber, int forwardDirection );

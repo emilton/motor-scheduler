@@ -7,9 +7,13 @@
 
 static MotorMovement motorMovement[NUM_MOTORS];
 
+#pragma CODE_SECTION( updateMotors, "ramfuncs" );
+#pragma CODE_SECTION( applyCommand, "ramfuncs" );
+#pragma CODE_SECTION( applyAcceleration, "ramfuncs" );
+#pragma CODE_SECTION( applyConstantSpeed, "ramfuncs" );
+
 static void applyAcceleration( Accelerating_t *accelerating );
 static void applyConstantSpeed( ConstantSpeed_t *constantSpeed );
-static int moveMotor( int, int );
 
 int schedulerInit( void ) {
     int i;
@@ -81,19 +85,3 @@ static void applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
         motorMovement[i].speed = constantSpeed->speeds[i];
     }
 }
-
-#ifndef TEST
-static int moveMotor( int motorNumber, int forwardDirection ) {
-    if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
-        if( forwardDirection ) {
-            /* Move motor forward. */
-            return 1;
-        } else {
-            /* Move motor backward. */
-            return 1;
-        }
-    } else {
-        return 0;
-    }
-}
-#endif

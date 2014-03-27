@@ -32,7 +32,7 @@
 
 #pragma CODE_SECTION( commandReceive, "ramfuncs" );
 #pragma CODE_SECTION( readSpi, "ramfuncs" );
-#pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
+#pragma CODE_SECTION( updateMotorsInterrupt, "ramfuncs" );
 
 static void commandReceive( void );
 static uint8_t readSpi( void );
@@ -40,7 +40,7 @@ static void handlesInit( void );
 static void gpioInit( void );
 static void spiInit( void );
 static void interruptInit( void );
-static interrupt void toggleLedsInterrupt( void );
+static interrupt void updateMotorsInterrupt( void );
 
 CLK_Handle myClk;
 CPU_Handle myCpu;
@@ -59,6 +59,7 @@ void main( void ) {
     gpioInit();
     spiInit();
     interruptInit();
+    schedulerInit();
     commandReceive();
 }
 
@@ -211,13 +212,10 @@ static void spiInit( void ) {
 
 static void interruptInit( void ) {
     // Register interrupt handlers in the PIE vector table
-    PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&toggleLedsInterrupt );
+    PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&updateMotorsInterrupt );
 
-    // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
-    // 60MHz CPU Freq, 50 millisecond Period ( in uSeconds )
-    //    ConfigCpuTimer( &CpuTimer0, 60, 500000 );
     TIMER_stop( myTimer );
-    TIMER_setPeriod( myTimer, 50 * 500000 );
+    TIMER_setPeriod( myTimer, 60 * 10 ); // 60 * 10 is 50kHz
     TIMER_setPreScaler( myTimer, 0 );
     TIMER_reload( myTimer );
     TIMER_setEmulationMode( myTimer, TIMER_EmulationMode_StopAfterNextDecrement );
@@ -232,12 +230,35 @@ static void interruptInit( void ) {
     CPU_enableDebugInt( myCpu );
 }
 
-static interrupt void toggleLedsInterrupt( void ) {
-    GPIO_toggle( myGpio, X_STEP );
-    GPIO_toggle( myGpio, Y_STEP );
-    GPIO_toggle( myGpio, Z_STEP );
+static interrupt void updateMotorsInterrupt( void ) {
     GPIO_toggle( myGpio, A_STEP );
+
+    updateMotors();
 
     // Acknowledge this interrupt to receive more interrupts from group 1
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
+}
+
+int moveMotor( int motorNumber, int forwardDirection ) {
+    if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
+        if( forwardDirection ) {
+            if( motorNumber == 0 )
+                GPIO_toggle( myGpio, X_STEP );
+            if( motorNumber == 1 )
+                GPIO_toggle( myGpio, Y_STEP );
+            if( motorNumber == 2 )
+                GPIO_toggle( myGpio, Z_STEP );
+            return 1;
+        } else {
+            if( motorNumber == 0 )
+                GPIO_toggle( myGpio, X_STEP );
+            if( motorNumber == 1 )
+                GPIO_toggle( myGpio, Y_STEP );
+            if( motorNumber == 2 )
+                GPIO_toggle( myGpio, Z_STEP );
+            return 1;
+        }
+    } else {
+        return 0;
+    }
 }
