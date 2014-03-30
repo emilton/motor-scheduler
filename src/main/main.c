@@ -64,20 +64,18 @@ void main( void ) {
 }
 
 static void commandReceive( void ) {
-    uint16_t command[ sizeof( Command_t ) ];
+    uint16_t command[ sizeof( Command_t ) + 1];
     uint8_t readData;
     size_t i = sizeof( uint8_t ), j;
 
     for( ;; ) {
-        for( i = 0; i < sizeof( Command_t ); i++ ) {
+        for( i = 0; i < sizeof( command ); i++ ) {
             for( j = 0; j < 2; j++ ) {
                 command[i] >>= 8;
                 readData = readSpi();
                 command[i] |= ( readData << 8 );
             }
         }
-        while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-        readSpi();
         applyCommand( ( Command_t* )( command ) );
     }
 }
