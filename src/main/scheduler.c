@@ -7,7 +7,7 @@
 
 static MotorMovement motorMovement[NUM_MOTORS];
 static Command_t	 commandBuffer[MAX_COMMANDS];
-static Command_t*    nextCommand;
+static Command_t*    thisCommand;
 static Command_t*    emptyCommand;
 
 
@@ -71,7 +71,7 @@ void updateMotors( void ) {
 		 calculate( &motorMovement[1], Y_STEP ) ||
 		 calculate( &motorMovement[2], Z_STEP ) ||
 		 calculate( &motorMovement[3], A_STEP ) )){
-		 applyCommand( nextCommand );
+		 applyCommand( thisCommand );
 	}
 
 }
@@ -105,7 +105,7 @@ int applyCommand( Command_t* command ) {
     }
 
     command->commandType = NoOp;
-    nextCommand = command;
+    thisCommand = thisCommand->nextCommand;
     return 1;
 }
 
@@ -120,9 +120,7 @@ static void applyAcceleration( Accelerating_t *accelerating ) {
         motorMovement[i].steps = accelerating->steps[i];
         motorMovement[i].acceleration = accelerating->accelerations[i];
 
-    	// before applying a new direction, make sure the motor is not moving.
-        if( motorMovement[i].speed == 0 )
-        	applyDirection( i, sign(motorMovement[i].speed ) );
+        applyDirection( i, sign(motorMovement[i].speed ) );
     }
 }
 
