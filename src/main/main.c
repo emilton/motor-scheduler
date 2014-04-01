@@ -19,10 +19,17 @@
 #define Y_STEP GPIO_Number_2
 #define Z_STEP GPIO_Number_7
 #define A_STEP GPIO_Number_5
+
 #define X_DIRECTION 4
 #define Y_DIRECTION 6
 #define Z_DIRECTION GPIO_Number_1
 #define A_DIRECTION GPIO_Number_6
+
+#define X_DIR ( 1 << X_DIRECTION )
+#define Y_DIR ( 1 << Y_DIRECTION )
+#define Z_DIR ( 1 << Z_DIRECTION )
+#define A_DIR ( 1 << A_DIRECTION )
+
 #define X_HOME GPIO_Number_4
 #define Y_HOME GPIO_Number_3
 #define Z_HOME GPIO_Number_32
@@ -41,6 +48,8 @@ static void gpioInit( void );
 static void spiInit( void );
 static void interruptInit( void );
 static interrupt void updateMotorsInterrupt( void );
+void applyDirection( int, int );
+void applyStep( int );
 
 CLK_Handle myClk;
 CPU_Handle myCpu;
@@ -166,8 +175,8 @@ static void gpioInit( void ) {
     GPIO_setHigh( myGpio, A_DIRECTION );
 
     ENABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
-	( ( GPIO_Obj * )myGpio )->AIOMUX1 = 0x00;
-	( ( GPIO_Obj * )myGpio )->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
+	((GPIO_Obj*)myGpio)->AIOMUX1 = 0x00;
+	((GPIO_Obj*)myGpio)->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
     DISABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
 
 
@@ -229,40 +238,38 @@ static void interruptInit( void ) {
     CPU_enableDebugInt( myCpu );
 }
 
-void blinkthefuckingledbitch( )
-{
-    GPIO_toggle( myGpio, GPIO_Number_0 );
-}
 
 static interrupt void updateMotorsInterrupt( void ) {
     //GPIO_toggle( myGpio, A_STEP );
-
-    blinkthefuckingledbitch();
-
     // Acknowledge this interrupt to receive more interrupts from group 1
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
 }
 
-int moveMotor( int motorNumber, int forwardDirection ) {
-    if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
-        if( forwardDirection ) {
-            if( motorNumber == 0 )
-                GPIO_toggle( myGpio, X_STEP );
-            if( motorNumber == 1 )
-                GPIO_toggle( myGpio, Y_STEP );
-            if( motorNumber == 2 )
-                GPIO_toggle( myGpio, Z_STEP );
-            return 1;
-        } else {
-            if( motorNumber == 0 )
-                GPIO_toggle( myGpio, X_STEP );
-            if( motorNumber == 1 )
-                GPIO_toggle( myGpio, Y_STEP );
-            if( motorNumber == 2 )
-                GPIO_toggle( myGpio, Z_STEP );
-            return 1;
-        }
-    } else {
-        return 0;
-    }
+void applyStep( int i ){
+	((GPIO_Obj*)myGpio)->GPATOGGLE = i;
+	((GPIO_Obj*)myGpio)->GPATOGGLE = i;
+}
+
+void applyDirection( int num, int dir ){
+	switch( num ){
+		case 0:
+			if( dir ) ((GPIO_Obj*)myGpio)->AIOSET = X_DIR;
+			else    ((GPIO_Obj*)myGpio)->AIOCLEAR = X_DIR;
+		break;
+		case 1:
+			if( dir ) ((GPIO_Obj*)myGpio)->AIOSET = Y_DIR;
+			else    ((GPIO_Obj*)myGpio)->AIOCLEAR = Y_DIR;
+		break;
+		case 2:
+			if( dir ) ((GPIO_Obj*)myGpio)->GPASET = Z_DIR;
+			else    ((GPIO_Obj*)myGpio)->GPACLEAR = Z_DIR;
+		break;
+		case 3:
+			if( dir ) ((GPIO_Obj*)myGpio)->GPASET = A_DIR;
+			else    ((GPIO_Obj*)myGpio)->GPACLEAR = A_DIR;
+		break;
+		default:
+			// INVALID MOTOR NUMBER
+		break;
+	}
 }
