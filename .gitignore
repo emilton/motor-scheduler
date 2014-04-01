@@ -11,4 +11,5 @@ Release/
 .settings/
 targetConfigs/
 .launches/
+.metadata/
 
