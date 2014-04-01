@@ -54,7 +54,7 @@ PLL_Handle myPll;
 SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
-static GPIO_Number_e motors[NUM_MOTORS];
+static const GPIO_Number_e motors[NUM_MOTORS] = {X_STEP, Y_STEP, Z_STEP};
 
 void main( void ) {
     handlesInit();
@@ -69,10 +69,6 @@ static void commandReceive( void ) {
     uint16_t command[ sizeof( Command_t ) + 1];
     uint8_t readData;
     size_t i = sizeof( uint8_t ), j;
-
-    motors[0] = X_STEP;
-    motors[1] = Y_STEP;
-    motors[2] = Z_STEP;
 
     for( ;; ) {
         for( i = 0; i < sizeof( command ); i++ ) {
