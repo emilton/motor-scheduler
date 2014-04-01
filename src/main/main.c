@@ -85,7 +85,7 @@ static void commandReceive( void ) {
                 command[i] |= ( readData << 8 );
             }
         }
-        applyCommand( ( Command_t* )( command ) );
+       //applyCommand( ( Command_t* )( command ) );
     }
 }
 
@@ -240,8 +240,7 @@ static void interruptInit( void ) {
 
 
 static interrupt void updateMotorsInterrupt( void ) {
-    //GPIO_toggle( myGpio, A_STEP );
-    // Acknowledge this interrupt to receive more interrupts from group 1
+	updateMotors( );
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
 }
 
