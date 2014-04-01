@@ -55,6 +55,7 @@ SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 static const GPIO_Number_e motors[NUM_MOTORS] = {X_STEP, Y_STEP, Z_STEP};
+static const int motorDirections[NUM_MOTORS - 1] = {X_DIRECTION, Y_DIRECTION};
 
 void main( void ) {
     handlesInit();
@@ -167,10 +168,10 @@ static void gpioInit( void ) {
     GPIO_setHigh( myGpio, Z_DIRECTION );
     GPIO_setHigh( myGpio, A_DIRECTION );
 
-    ENABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
-    ( ( GPIO_Obj * )myGpio )->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
-    ( ( GPIO_Obj * )myGpio )->AIOSET = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
-    DISABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
+    ENABLE_PROTECTED_REGISTER_WRITE_MODE;
+    ( ( GPIO_Obj* )myGpio )->AIOMUX1 = 0;
+    ( ( GPIO_Obj* )myGpio )->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
+    DISABLE_PROTECTED_REGISTER_WRITE_MODE;
 
     GPIO_setPullUp( myGpio, GPIO_Number_16, GPIO_PullUp_Enable );
     GPIO_setPullUp( myGpio, GPIO_Number_17, GPIO_PullUp_Enable );
@@ -249,6 +250,20 @@ static void clearMotors( void ) {
 }
 
 int setDirection( int motorNumber, int forwardDirection ) {
+	if( motorNumber < 2 ) {
+		int motorDirection = motorDirections[motorNumber];
+		if( forwardDirection ) {
+			( ( GPIO_Obj* )myGpio )->AIOSET = ( 1 << motorDirection );
+		} else {
+			( ( GPIO_Obj* )myGpio )->AIOCLEAR = ( 1 << motorDirection );
+		}
+	} else {
+		if( forwardDirection ) {
+			GPIO_setHigh( myGpio, Z_DIRECTION );
+		} else {
+			GPIO_setLow( myGpio, Z_DIRECTION );
+		}
+	}
     return 1;
 }
 
