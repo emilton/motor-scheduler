@@ -166,9 +166,10 @@ static void gpioInit( void ) {
     GPIO_setHigh( myGpio, A_DIRECTION );
 
     ENABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
-    ( ( GPIO_Obj * )myGpio )->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
-    ( ( GPIO_Obj * )myGpio )->AIOSET = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
+	( ( GPIO_Obj * )myGpio )->AIOMUX1 = 0x00;
+	( ( GPIO_Obj * )myGpio )->AIODIR = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
     DISABLE_PROTECTED_REGISTER_WRITE_MODE; /* TODO: Test to see if this is needed */
+
 
     GPIO_setPullUp( myGpio, GPIO_Number_16, GPIO_PullUp_Enable );
     GPIO_setPullUp( myGpio, GPIO_Number_17, GPIO_PullUp_Enable );
@@ -213,7 +214,7 @@ static void interruptInit( void ) {
     PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&updateMotorsInterrupt );
 
     TIMER_stop( myTimer );
-    TIMER_setPeriod( myTimer, 60 * 10 ); // 60 * 10 is 50kHz
+    TIMER_setPeriod( myTimer, 3000 );
     TIMER_setPreScaler( myTimer, 0 );
     TIMER_reload( myTimer );
     TIMER_setEmulationMode( myTimer, TIMER_EmulationMode_StopAfterNextDecrement );
@@ -228,10 +229,15 @@ static void interruptInit( void ) {
     CPU_enableDebugInt( myCpu );
 }
 
-static interrupt void updateMotorsInterrupt( void ) {
-    GPIO_toggle( myGpio, A_STEP );
+void blinkthefuckingledbitch( )
+{
+    GPIO_toggle( myGpio, GPIO_Number_0 );
+}
 
-    updateMotors();
+static interrupt void updateMotorsInterrupt( void ) {
+    //GPIO_toggle( myGpio, A_STEP );
+
+    blinkthefuckingledbitch();
 
     // Acknowledge this interrupt to receive more interrupts from group 1
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
