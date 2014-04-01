@@ -41,6 +41,7 @@ static void gpioInit( void );
 static void spiInit( void );
 static void interruptInit( void );
 static interrupt void updateMotorsInterrupt( void );
+static void clearMotors( void );
 
 CLK_Handle myClk;
 CPU_Handle myCpu;
@@ -53,6 +54,7 @@ PLL_Handle myPll;
 SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
+static GPIO_Number_e motors[NUM_MOTORS];
 
 void main( void ) {
     handlesInit();
@@ -67,6 +69,10 @@ static void commandReceive( void ) {
     uint16_t command[ sizeof( Command_t ) + 1];
     uint8_t readData;
     size_t i = sizeof( uint8_t ), j;
+
+    motors[0] = X_STEP;
+    motors[1] = Y_STEP;
+    motors[2] = Z_STEP;
 
     for( ;; ) {
         for( i = 0; i < sizeof( command ); i++ ) {
@@ -231,32 +237,26 @@ static void interruptInit( void ) {
 static interrupt void updateMotorsInterrupt( void ) {
     GPIO_toggle( myGpio, A_STEP );
 
+    clearMotors();
     updateMotors();
 
     // Acknowledge this interrupt to receive more interrupts from group 1
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
 }
 
-int moveMotor( int motorNumber, int forwardDirection ) {
-    if( motorNumber >= 0 && motorNumber < NUM_MOTORS ) {
-        if( forwardDirection ) {
-            if( motorNumber == 0 )
-                GPIO_toggle( myGpio, X_STEP );
-            if( motorNumber == 1 )
-                GPIO_toggle( myGpio, Y_STEP );
-            if( motorNumber == 2 )
-                GPIO_toggle( myGpio, Z_STEP );
-            return 1;
-        } else {
-            if( motorNumber == 0 )
-                GPIO_toggle( myGpio, X_STEP );
-            if( motorNumber == 1 )
-                GPIO_toggle( myGpio, Y_STEP );
-            if( motorNumber == 2 )
-                GPIO_toggle( myGpio, Z_STEP );
-            return 1;
-        }
-    } else {
-        return 0;
+static void clearMotors( void ) {
+    int i;
+
+    for( i = 0; i < NUM_MOTORS; i++ ) {
+        GPIO_setLow( myGpio, motors[i] );
     }
+}
+
+int setDirection( int motorNumber, int forwardDirection ) {
+    return 1;
+}
+
+int moveMotor( int motorNumber ) {
+    GPIO_setHigh( myGpio, motors[motorNumber] );
+    return 1;
 }

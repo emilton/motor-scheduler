@@ -12,8 +12,8 @@ static MotorMovement motorMovement[NUM_MOTORS];
 #pragma CODE_SECTION( applyAcceleration, "ramfuncs" );
 #pragma CODE_SECTION( applyConstantSpeed, "ramfuncs" );
 
-static void applyAcceleration( Accelerating_t *accelerating );
-static void applyConstantSpeed( ConstantSpeed_t *constantSpeed );
+static int applyAcceleration( Accelerating_t *accelerating );
+static int applyConstantSpeed( ConstantSpeed_t *constantSpeed );
 
 int schedulerInit( void ) {
     int i;
@@ -31,21 +31,23 @@ int schedulerInit( void ) {
 int updateMotors( void ) {
     int i;
     MotorMovement *motor;
-    int32_t oldFractionalStep;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
         motor = &motorMovement[i];
         if( motor->steps ) {
             motor->speed += motor->acceleration;
 
-            oldFractionalStep = motor->fractionalStep;
             motor->fractionalStep += motor->speed;
-            if( ( motor->fractionalStep ^ motor->speed ) & ( motor->fractionalStep ^ oldFractionalStep ) & 0x80000000 ) {
-                if( !moveMotor( i, sign( motor->speed ) ) ) {
+#ifdef x86
+            asm( "jno noOverflow" );
+#else
+            asm( " sb noOverflow cond nov" );
+#endif
+                if( !moveMotor( i ) ) {
                     return 0;
                 }
                 motor->steps--;
-            }
+            asm( "noOverflow:" );
         }
     }
 
@@ -55,28 +57,29 @@ int updateMotors( void ) {
 int applyCommand( Command_t *command ) {
     switch( command->commandType ) {
         case Accelerating:
-            applyAcceleration( &command->command.accelerating );
-            break;
+            return applyAcceleration( &command->command.accelerating );
         case ConstantSpeed:
-            applyConstantSpeed( &command->command.constantSpeed );
-            break;
+            return applyConstantSpeed( &command->command.constantSpeed );
         default:
             return 0;
+    }
+}
+
+static int applyAcceleration( Accelerating_t *accelerating ) {
+    int i;
+
+    for( i = 0; i < NUM_MOTORS; i++ ) {
+        if( ! setDirection( i, sign( motorMovement[i].acceleration ) ) ) {
+            return 0;
+        }
+        motorMovement[i].steps = accelerating->steps[i];
+        motorMovement[i].acceleration = accelerating->accelerations[i];
     }
 
     return 1;
 }
 
-static void applyAcceleration( Accelerating_t *accelerating ) {
-    int i;
-
-    for( i = 0; i < NUM_MOTORS; i++ ) {
-        motorMovement[i].steps = accelerating->steps[i];
-        motorMovement[i].acceleration = accelerating->accelerations[i];
-    }
-}
-
-static void applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
+static int applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
     int i;
 
     for( i = 0; i < NUM_MOTORS; i++ ) {
@@ -84,4 +87,6 @@ static void applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
         motorMovement[i].acceleration = 0;
         motorMovement[i].speed = constantSpeed->speeds[i];
     }
+
+    return 1;
 }

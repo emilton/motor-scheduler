@@ -7,7 +7,9 @@ struct MotorMovement {
     int32_t acceleration;
 };
 
+/*TODO: Make these externs*/
 int schedulerInit( void );
 int applyCommand( Command_t *command );
 int updateMotors( void );
-int moveMotor( int motorNumber, int forwardDirection );
+int moveMotor( int motorNumber );
+int setDirection( int motorNumber, int forwardDirection );

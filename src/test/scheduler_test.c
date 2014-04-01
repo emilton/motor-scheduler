@@ -34,14 +34,14 @@ static void schedulerInitTest( CuTest *tc ) {
 
 static void moveMotorTest( CuTest *tc ) {
     expectedMotorNumber = -1;
-    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0, 1 ) );
+    expectedMotorDirection = -1;
+    CuAssert( tc, "Haven't told expected motor number, should fail.", !moveMotor( 0 ) );
+    CuAssert( tc, "Haven't told expected motor direction, should fail.", !setDirection( 0, 0 ) );
 
     expectedMotorNumber = 0;
     expectedMotorDirection = 1;
-    CuAssert( tc, "Gave the expected motor number and direction, should work.", moveMotor( 0, 1 ) );
-
-    expectedMotorDirection = 0;
-    CuAssert( tc, "Gave the expected motor number and direction, should work.", moveMotor( 0, 0 ) );
+    CuAssert( tc, "Gave the expected motor number, should work.", moveMotor( 0 ) );
+    CuAssert( tc, "Gave the expected motor direction, should work.", setDirection( 0, 1 ) );
 }
 
 static void setupMotors( void ) {
@@ -117,6 +117,8 @@ static void updateMotorsTest_CompleteMove( CuTest *tc ) {
 static void applyAccelerationTest( CuTest *tc ) {
     Command_t command = {Accelerating, {{{100}, {200}}}};
 
+    expectedMotorNumber = 0;
+    expectedMotorDirection = 1;
     CuAssert( tc, "Should have applied command successfully.", applyCommand( &command ) );
     CuAssert( tc, "Should have set acceleration and speed.", motorMovement[0].steps == 100 && motorMovement[0].acceleration == 200 );
 }
@@ -144,10 +146,18 @@ CuSuite* CuGetSuite( void ) {
     return suite;
 }
 
-int moveMotor( int motorNumber, int forwardDirection ) {
+int moveMotor( int motorNumber ) {
     if( expectedMotorNumber < 0 || expectedMotorDirection < 0 ) {
         return 0;
     } else {
-        return motorNumber == expectedMotorNumber && forwardDirection == expectedMotorDirection;
+        return motorNumber == expectedMotorNumber;
+    }
+}
+
+int setDirection( int motorNumber, int forwardDirection ) {
+    if( expectedMotorNumber < 0 || expectedMotorDirection < 0 ) {
+        return 0;
+    } else {
+        return motorNumber == expectedMotorNumber++ && forwardDirection == expectedMotorDirection;
     }
 }
