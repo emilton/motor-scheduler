@@ -79,6 +79,9 @@ static void commandReceive( void ) {
                 command[i] |= ( readData << 8 );
             }
         }
+    	/*if( ( ( Command_t* )( command ) )->command.constantSpeed.speeds[0] == 85899 ) {
+    		GPIO_toggle( myGpio, A_STEP );
+    	}*/
         applyCommand( ( Command_t* )( command ) );
     }
 }
@@ -117,8 +120,7 @@ static void handlesInit( void ) {
     //Select the internal oscillator 1 as the clock source
     CLK_setOscSrc( myClk, CLK_OscSrc_Internal );
 
-    // Setup the PLL for x12 /2 which will yield 60Mhz = 10Mhz * 12 / 2
-    PLL_setup( myPll, PLL_Multiplier_12, PLL_DivideSelect_ClkIn_by_2 );
+    PLL_setup( myPll, PLL_Multiplier_12, PLL_DivideSelect_ClkIn_by_1 );
 
     // Disable the PIE and all interrupts
     PIE_disable( myPie );
@@ -216,7 +218,7 @@ static void interruptInit( void ) {
     PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&updateMotorsInterrupt );
 
     TIMER_stop( myTimer );
-    TIMER_setPeriod( myTimer, 60 * 10 ); // 60 * 10 is 50kHz
+    TIMER_setPeriod( myTimer, 2400 );
     TIMER_setPreScaler( myTimer, 0 );
     TIMER_reload( myTimer );
     TIMER_setEmulationMode( myTimer, TIMER_EmulationMode_StopAfterNextDecrement );
@@ -232,8 +234,6 @@ static void interruptInit( void ) {
 }
 
 static interrupt void updateMotorsInterrupt( void ) {
-    GPIO_toggle( myGpio, A_STEP );
-
     clearMotors();
     updateMotors();
 
