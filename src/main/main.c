@@ -54,6 +54,7 @@ PLL_Handle myPll;
 SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
+
 static const GPIO_Number_e motors[NUM_MOTORS] = {X_STEP, Y_STEP, Z_STEP};
 static const int motorDirections[NUM_MOTORS - 1] = {X_DIRECTION, Y_DIRECTION};
 
