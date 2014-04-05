@@ -57,7 +57,7 @@ WDOG_Handle myWDog;
 
 static const GPIO_Number_e motors[NUM_MOTORS] = {X_STEP, Y_STEP, Z_STEP};
 static const int motorDirections[NUM_MOTORS - 1] = {X_DIRECTION, Y_DIRECTION};
-static Command_t commandArray[3] = {0};
+static Command_t commandArray[3];
 static int commandCount = 2;
 
 void main( void ) {
@@ -82,26 +82,19 @@ static void waitSpi( void ) {
 }
 
 static void commandReceive( void ) {
-    uint16_t command[ sizeof( Command_t ) + 1];
-    size_t i = sizeof( uint8_t ), j;
-    uint8_t readData;
+    int i;
+    char *commands = ( char* ) commandArray;
 
-    /*
-    uint8_t readData = waitSpi();
-    while( !readData )
-    	readData = waitSpi();
-    */
     SPI_enable( mySpi );
 
     waitSpi();
-	for( i = 0; i < sizeof( command )*2*3; i++ ) {
-		readData = readSpi();/*
-		for( j = 0; j < 2; j++ ) {
-			command[i] >>= 8;
-			readData = readSpi();
-			command[i] |= ( readData << 8 );
-		}*/
+	for( i = 0; i < sizeof( commandArray ) * 2; i++ ) {
+		commands[i] = 0;
+		commands[i] = readSpi();
+		commands[i] |= readSpi() << 8;
 	}
+	readSpi();
+	readSpi();
 
 	SPI_disable( mySpi );
 }
