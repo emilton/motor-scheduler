@@ -91,6 +91,7 @@ static void commandReceive( void ) {
     while( !readData )
     	readData = waitSpi();
     */
+    SPI_enable( mySpi );
 
     waitSpi();
 	for( i = 0; i < sizeof( command )*2*3; i++ ) {
@@ -101,6 +102,8 @@ static void commandReceive( void ) {
 			command[i] |= ( readData << 8 );
 		}*/
 	}
+
+	SPI_disable( mySpi );
 }
 
 static uint8_t readSpi( void ) {
@@ -235,8 +238,6 @@ static void spiInit( void ) {
 
     // Set so breakpoints don't disturb transmission
     SPI_setPriority( mySpi, SPI_Priority_Immediate );
-
-    SPI_enable( mySpi );
 }
 
 static void interruptInit( void ) {
