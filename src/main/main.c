@@ -57,6 +57,8 @@ WDOG_Handle myWDog;
 
 static const GPIO_Number_e motors[NUM_MOTORS] = {X_STEP, Y_STEP, Z_STEP};
 static const int motorDirections[NUM_MOTORS - 1] = {X_DIRECTION, Y_DIRECTION};
+static Command_t commandArray[3] = {0};
+static int commandCount = 2;
 
 void main( void ) {
     handlesInit();
@@ -67,24 +69,36 @@ void main( void ) {
     commandReceive();
 }
 
+static uint8_t waitSpi( void ) {
+    uint8_t readData;
+
+    while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+    readData = SPI_read( mySpi );
+    SPI_write8( mySpi, 0xA5 );
+
+    return readData;
+}
+
 static void commandReceive( void ) {
     uint16_t command[ sizeof( Command_t ) + 1];
-    uint8_t readData;
     size_t i = sizeof( uint8_t ), j;
+    uint8_t readData;
 
-    for( ;; ) {
-        for( i = 0; i < sizeof( command ); i++ ) {
-            for( j = 0; j < 2; j++ ) {
-                command[i] >>= 8;
-                readData = readSpi();
-                command[i] |= ( readData << 8 );
-            }
-        }
-    	/*if( ( ( Command_t* )( command ) )->command.constantSpeed.speeds[0] == 85899 ) {
-    		GPIO_toggle( myGpio, A_STEP );
-    	}*/
-        applyCommand( ( Command_t* )( command ) );
-    }
+    /*
+    uint8_t readData = waitSpi();
+    while( !readData )
+    	readData = waitSpi();
+    */
+
+    while( !waitSpi() )
+	for( i = 0; i < sizeof( command )*2*3; i++ ) {
+		readData = readSpi();/*
+		for( j = 0; j < 2; j++ ) {
+			command[i] >>= 8;
+			readData = readSpi();
+			command[i] |= ( readData << 8 );
+		}*/
+	}
 }
 
 static uint8_t readSpi( void ) {
@@ -95,6 +109,15 @@ static uint8_t readSpi( void ) {
     SPI_write8( mySpi, readData );
 
     return readData;
+}
+
+void getNewCommand( void ){
+	 commandCount++;
+	 if( commandCount >= 3 ){
+		 commandReceive();
+		 commandCount  = 0;
+	 }
+	 //applyCommand( &commandArray[commandCount] );
 }
 
 static void handlesInit( void ) {

@@ -19,10 +19,10 @@ int schedulerInit( void ) {
     int i;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
-        motorMovement[i].steps = -1;
+        motorMovement[i].steps = 0;
         motorMovement[i].fractionalStep = 0;
-        motorMovement[i].speed = -85900; // (2^32)/50k/desired freq
-        motorMovement[i].acceleration = 100;
+        motorMovement[i].speed = 0; // (2^32)/50k/desired freq
+        motorMovement[i].acceleration = 0;
     }
 
     return 1;
@@ -30,13 +30,13 @@ int schedulerInit( void ) {
 
 int updateMotors( void ) {
     int i;
-    static int j = 0;
-    j++;
+    int hasSteps = 0;
     MotorMovement *motor;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
         motor = &motorMovement[i];
         if( motor->steps ) {
+           	hasSteps++;
             motor->speed += motor->acceleration;
 
 #ifndef x86
@@ -57,7 +57,8 @@ int updateMotors( void ) {
             asm( "noOverflow:" );
         }
     }
-
+    if( !hasSteps )
+    	getNewCommand();
     return 1;
 }
 
