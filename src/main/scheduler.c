@@ -29,14 +29,14 @@ int schedulerInit( void ) {
 }
 
 int updateMotors( void ) {
-    int i;
-    int hasSteps = 0;
     MotorMovement *motor;
+    int hasSteps = 0;
+    int i;
 
     for( i = 0; i < NUM_MOTORS; ++i ) {
         motor = &motorMovement[i];
         if( motor->steps ) {
-           	hasSteps++;
+           	hasSteps = 1;
             motor->speed += motor->acceleration;
 
 #ifndef x86
@@ -57,8 +57,11 @@ int updateMotors( void ) {
             asm( "noOverflow:" );
         }
     }
-    if( !hasSteps )
+
+    if( !hasSteps ) {
     	getNewCommand();
+    }
+
     return 1;
 }
 

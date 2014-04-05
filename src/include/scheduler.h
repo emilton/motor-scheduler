@@ -9,6 +9,7 @@ struct MotorMovement {
 
 /*TODO: Make these externs*/
 int schedulerInit( void );
+void getNewCommand( void );
 int applyCommand( Command_t *command );
 int updateMotors( void );
 int moveMotor( int motorNumber );

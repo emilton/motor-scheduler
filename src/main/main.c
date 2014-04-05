@@ -69,14 +69,16 @@ void main( void ) {
     commandReceive();
 }
 
-static uint8_t waitSpi( void ) {
-    uint8_t readData;
-
-    while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-    readData = SPI_read( mySpi );
-    SPI_write8( mySpi, 0xA5 );
-
-    return readData;
+static void waitSpi( void ) {
+    for( ;; ) {
+    	while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+    	if( !SPI_read( mySpi ) ) {
+    		SPI_write8( mySpi, 0xA5 );
+    	} else {
+    		SPI_write8( mySpi, 0 );
+    		return;
+    	}
+    }
 }
 
 static void commandReceive( void ) {
@@ -90,7 +92,7 @@ static void commandReceive( void ) {
     	readData = waitSpi();
     */
 
-    while( !waitSpi() )
+    waitSpi();
 	for( i = 0; i < sizeof( command )*2*3; i++ ) {
 		readData = readSpi();/*
 		for( j = 0; j < 2; j++ ) {
