@@ -1,4 +1,5 @@
 #include <limits.h>
+#include <string.h>
 
 #include "DSP28x_Project.h"
 #include "F2802x_Device.h"
@@ -83,13 +84,13 @@ static void waitSpi( void ) {
 
 static void commandReceive( void ) {
     int i;
-    char *commands = ( char* ) commandArray;
+    uint16_t *commands = ( uint16_t* ) commandArray;
+    memset( commandArray, 0, sizeof(commandArray) );
 
     SPI_enable( mySpi );
 
     waitSpi();
 	for( i = 0; i < sizeof( commandArray ) * 2; i++ ) {
-		commands[i] = 0;
 		commands[i] = readSpi();
 		commands[i] |= readSpi() << 8;
 	}
@@ -115,7 +116,7 @@ void getNewCommand( void ){
 		 commandReceive();
 		 commandCount  = 0;
 	 }
-	 //applyCommand( &commandArray[commandCount] );
+	 applyCommand( &commandArray[commandCount] );
 }
 
 static void handlesInit( void ) {
