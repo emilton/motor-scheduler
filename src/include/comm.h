@@ -21,7 +21,7 @@ struct ConstantSpeed_t {
 };
 
 struct Command_t {
-    char commandType;
+    int32_t commandType;
     union {
         Accelerating_t accelerating;
         ConstantSpeed_t constantSpeed;

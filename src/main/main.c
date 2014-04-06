@@ -1,5 +1,4 @@
 #include <limits.h>
-#include <string.h>
 
 #include "DSP28x_Project.h"
 #include "F2802x_Device.h"
@@ -67,37 +66,37 @@ void main( void ) {
     spiInit();
     interruptInit();
     schedulerInit();
-    commandReceive();
+    for( ;; ) {}
 }
 
 static void waitSpi( void ) {
     for( ;; ) {
-    	while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-    	if( !SPI_read( mySpi ) ) {
-    		SPI_write8( mySpi, 0xA5 );
-    	} else {
-    		SPI_write8( mySpi, 0 );
-    		return;
-    	}
+        while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+        if( ( SPI_read( mySpi ) & 0xFF ) != 0x5A ) {
+            SPI_write8( mySpi, 0xA5 );
+        } else {
+            SPI_write8( mySpi, 0 );
+            return;
+        }
     }
 }
 
 static void commandReceive( void ) {
     int i;
     uint16_t *commands = ( uint16_t* ) commandArray;
-    memset( commandArray, 0, sizeof(commandArray) );
 
     SPI_enable( mySpi );
 
     waitSpi();
-	for( i = 0; i < sizeof( commandArray ) * 2; i++ ) {
-		commands[i] = readSpi();
-		commands[i] |= readSpi() << 8;
-	}
-	readSpi();
-	readSpi();
+    for( i = 0; i < sizeof( commandArray ); i++ ) {
+        commands[i] = readSpi();
+        commands[i] <<= 8;
+        commands[i] |= readSpi() & 0xFF;
+    }
+    readSpi();
+    readSpi();
 
-	SPI_disable( mySpi );
+    SPI_disable( mySpi );
 }
 
 static uint8_t readSpi( void ) {
@@ -105,18 +104,18 @@ static uint8_t readSpi( void ) {
 
     while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
     readData = SPI_read( mySpi );
-    SPI_write8( mySpi, readData );
+    SPI_write8( mySpi, ~readData );
 
     return readData;
 }
 
 void getNewCommand( void ){
-	 commandCount++;
-	 if( commandCount >= 3 ){
-		 commandReceive();
-		 commandCount  = 0;
-	 }
-	 applyCommand( &commandArray[commandCount] );
+     commandCount++;
+     if( commandCount >= 3 ){
+         commandReceive();
+         commandCount  = 0;
+     }
+     applyCommand( &commandArray[commandCount] );
 }
 
 static void handlesInit( void ) {
@@ -271,20 +270,20 @@ static void clearMotors( void ) {
 }
 
 int setDirection( int motorNumber, int forwardDirection ) {
-	if( motorNumber < 2 ) {
-		int motorDirection = motorDirections[motorNumber];
-		if( forwardDirection ) {
-			( ( GPIO_Obj* )myGpio )->AIOSET = ( 1 << motorDirection );
-		} else {
-			( ( GPIO_Obj* )myGpio )->AIOCLEAR = ( 1 << motorDirection );
-		}
-	} else {
-		if( forwardDirection ) {
-			GPIO_setHigh( myGpio, Z_DIRECTION );
-		} else {
-			GPIO_setLow( myGpio, Z_DIRECTION );
-		}
-	}
+    if( motorNumber < 2 ) {
+        int motorDirection = motorDirections[motorNumber];
+        if( forwardDirection ) {
+            ( ( GPIO_Obj* )myGpio )->AIOSET = ( 1 << motorDirection );
+        } else {
+            ( ( GPIO_Obj* )myGpio )->AIOCLEAR = ( 1 << motorDirection );
+        }
+    } else {
+        if( forwardDirection ) {
+            GPIO_setHigh( myGpio, Z_DIRECTION );
+        } else {
+            GPIO_setLow( myGpio, Z_DIRECTION );
+        }
+    }
     return 1;
 }
 

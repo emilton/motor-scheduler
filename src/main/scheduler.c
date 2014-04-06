@@ -36,7 +36,7 @@ int updateMotors( void ) {
     for( i = 0; i < NUM_MOTORS; ++i ) {
         motor = &motorMovement[i];
         if( motor->steps ) {
-           	hasSteps = 1;
+               hasSteps = 1;
             motor->speed += motor->acceleration;
 
 #ifndef x86
@@ -49,7 +49,6 @@ int updateMotors( void ) {
 #else
             asm( " sb noOverflow cond nov" );
 #endif
-            	//motor->fractionalStep = 0;
                 if( !moveMotor( i ) ) {
                     return 0;
                 }
@@ -59,7 +58,7 @@ int updateMotors( void ) {
     }
 
     if( !hasSteps ) {
-    	getNewCommand();
+        getNewCommand();
     }
 
     return 1;
@@ -94,9 +93,11 @@ static int applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
     int i;
 
     for( i = 0; i < NUM_MOTORS; i++ ) {
-        motorMovement[i].steps = constantSpeed->steps[i];
-        motorMovement[i].acceleration = 0;
-        motorMovement[i].speed = constantSpeed->speeds[i];
+        if( constantSpeed->steps[i] ) {
+            motorMovement[i].steps = constantSpeed->steps[i];
+            motorMovement[i].acceleration = 0;
+            motorMovement[i].speed = constantSpeed->speeds[i];
+        }
     }
 
     return 1;
