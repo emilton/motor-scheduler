@@ -34,6 +34,7 @@
 #pragma CODE_SECTION( readSpi, "ramfuncs" );
 #pragma CODE_SECTION( updateMotorsInterrupt, "ramfuncs" );
 
+static void listenForShutdown( void );
 static void commandReceive( void );
 static uint8_t readSpi( void );
 static void handlesInit( void );
@@ -66,7 +67,15 @@ void main( void ) {
     spiInit();
     interruptInit();
     schedulerInit();
-    for( ;; ) {}
+    for( ;; ) {
+        listenForShutdown();
+    }
+}
+
+static void listenForShutdown( void ) {
+    if( GPIO_getData( myGpio, GPIO_Number_19 ) ) {
+        // Disable motors and SHUT IT DOWN!!!
+    }
 }
 
 static void waitSpi( void ) {
