@@ -3,8 +3,6 @@
 #include "comm.h"
 #include "scheduler.h"
 
-#define sign(x) ( x >= 0 )
-
 static MotorMovement motorMovement[NUM_MOTORS];
 
 #pragma CODE_SECTION( updateMotors, "ramfuncs" );
@@ -79,9 +77,6 @@ static int applyAcceleration( Accelerating_t *accelerating ) {
     int i;
 
     for( i = 0; i < NUM_MOTORS; i++ ) {
-        if( ! setDirection( i, sign( motorMovement[i].acceleration ) ) ) {
-            return 0;
-        }
         motorMovement[i].steps = accelerating->steps[i];
         motorMovement[i].acceleration = accelerating->accelerations[i];
     }

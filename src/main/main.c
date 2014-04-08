@@ -30,6 +30,8 @@
 #define DRIVER_ENABLE 2
 #define FAULT GPIO_Number_12
 
+#define sign(x) ( x >= 0 )
+
 #pragma CODE_SECTION( commandReceive, "ramfuncs" );
 #pragma CODE_SECTION( readSpi, "ramfuncs" );
 #pragma CODE_SECTION( updateMotorsInterrupt, "ramfuncs" );
@@ -119,12 +121,16 @@ static uint8_t readSpi( void ) {
 }
 
 void getNewCommand( void ){
-     commandCount++;
-     if( commandCount >= 3 ){
-         commandReceive();
-         commandCount  = 0;
-     }
-     applyCommand( &commandArray[commandCount] );
+    int i;
+    commandCount++;
+    if( commandCount >= 3 ){
+        commandReceive();
+        for( i = 0; i < NUM_MOTORS; i++ ) {
+            setDirection( i, sign( commandArray[i].command.accelerating.accelerations[i] ) );
+        }
+        commandCount  = 0;
+    }
+    applyCommand( &commandArray[commandCount] );
 }
 
 static void handlesInit( void ) {
