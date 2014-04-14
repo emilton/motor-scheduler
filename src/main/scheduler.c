@@ -3,7 +3,11 @@
 #include "comm.h"
 #include "scheduler.h"
 
-static MotorMovement motorMovement[NUM_MOTORS];
+static MotorMovement motorMovement[NUM_MOTORS+NUM_WORKHEAD];
+
+static int workHeadFinalSpeed = 0;
+static int workHeadDutySteps = 0;
+static int workHeadAcceleration = 0;
 
 #pragma CODE_SECTION( updateMotors, "ramfuncs" );
 #pragma CODE_SECTION( applyCommand, "ramfuncs" );
@@ -14,15 +18,12 @@ static int applyAcceleration( Accelerating_t *accelerating );
 static int applyConstantSpeed( ConstantSpeed_t *constantSpeed );
 
 int schedulerInit( void ) {
-    int i;
+    memset( &motorMovement, 0, sizeof(MotorMovement)*(NUM_MOTORS+NUM_WORKHEAD));
+    return 1;
+}
 
-    for( i = 0; i < NUM_MOTORS; ++i ) {
-        motorMovement[i].steps = 0;
-        motorMovement[i].fractionalStep = 0;
-        motorMovement[i].speed = 0; // (2^32)/50k/desired freq
-        motorMovement[i].acceleration = 0;
-    }
-
+int schedulerClear( void ) {
+	memset( &motorMovement, 0, sizeof(MotorMovement)*(NUM_MOTORS));
     return 1;
 }
 
@@ -31,22 +32,21 @@ int updateMotors( void ) {
     int hasSteps = 0;
     int i;
 
-    for( i = 0; i < NUM_MOTORS; ++i ) {
+    for( i = 0; i < (NUM_MOTORS); ++i ) {
         motor = &motorMovement[i];
         if( motor->steps ) {
                hasSteps = 1;
             motor->speed += motor->acceleration;
-
-#ifndef x86
+		#ifndef x86
             asm( " sb clearVflag cond nov" );
             asm( "clearVflag" );
-#endif
+		#endif
             motor->fractionalStep += motor->speed;
-#ifdef x86
+		#ifdef x86
             asm( "jno noOverflow" );
-#else
+		#else
             asm( " sb noOverflow cond nov" );
-#endif
+		#endif
                 if( !moveMotor( i ) ) {
                     return 0;
                 }
@@ -63,11 +63,15 @@ int updateMotors( void ) {
 }
 
 int applyCommand( Command_t *command ) {
-    switch( command->commandType ) {
+    switch( command->commandType & 0x000000FF ) {
         case Accelerating:
             return applyAcceleration( &command->command.accelerating );
         case ConstantSpeed:
             return applyConstantSpeed( &command->command.constantSpeed );
+        case Home:
+            return 1;
+        case WorkHead:
+        	return 1;
         default:
             return 0;
     }
@@ -95,5 +99,12 @@ static int applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
         }
     }
 
+    return 1;
+}
+
+static int applyWorkHead( WorkHead_t *workHeadCommand ) {
+	workHeadFinalSpeed = workHeadCommand->frequency;
+	workHeadDutySteps = workHeadCommand->dutyCycle;
+	workHeadAcceleration = workHeadCommand->acceleration;
     return 1;
 }
