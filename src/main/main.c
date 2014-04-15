@@ -68,7 +68,8 @@ static const GPIO_Number_e motorDirections[NUM_MOTORS+NUM_WORKHEADS] = {X_DIRECT
 static const GPIO_Number_e motorHomes[NUM_MOTORS+NUM_WORKHEADS] = {X_HOME, Y_HOME, Z_HOME, A_HOME};
 
 static Command_t commandArray[3];
-static int commandCount = 2;
+static int numberCommands = 0;
+static int commandCount = 0;
 
 static char shouldGetNextCommand = 0;
 
@@ -93,26 +94,32 @@ static void listenForShutdown( void ) {
     }
 }
 
-static void waitSpi( void ) {
+static int waitSpi( void ) {
+    uint8_t readData;
     for( ;; ) {
         while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-        if( ( SPI_read( mySpi ) & 0xFF ) != 0x5A ) {
-            SPI_write8( mySpi, 0xA5 );
-        } else {
+        readData = ( SPI_read( mySpi ) & 0xFF );
+        if( readData == 0x33 ) {
             SPI_write8( mySpi, 0 );
-            return;
+            return 3;
+        } else if ( readData == 0x11 ) {
+            SPI_write8( mySpi, 0 );
+            return 1;
+        }else {
+            SPI_write8( mySpi, 0xA5 );
         }
     }
 }
 
 static void commandReceive( void ) {
-    int i;
+    int i, wordsToReceive;
     uint16_t *commands = ( uint16_t* ) commandArray;
 
     SPI_enable( mySpi );
 
-    waitSpi();
-    for( i = 0; i < sizeof( commandArray ); i++ ) {
+    numberCommands = waitSpi();
+    wordsToReceive = numberCommands * sizeof( Command_t );
+    for( i = 0; i < wordsToReceive; i++ ) {
         commands[i] = readSpi();
         commands[i] <<= 8;
         commands[i] |= readSpi() & 0xFF;
@@ -136,15 +143,23 @@ static uint8_t readSpi( void ) {
 static void getNewCommand( void ){
     int i;
     commandCount++;
-    if( commandCount >= 3 ){
+    if( commandCount >= numberCommands ){
         TIMER_disableInt( myTimer );
+        GPIO_toggle( myGpio, A_STEP );
         commandReceive();
-        for( i = 0; i < NUM_MOTORS; i++ ) {
-            setDirection( i, sign( commandArray[i].command.accelerating.accelerations[i] ) );
+        if( commandArray[0].commandType == Accelerating ) {
+            for( i = 0; i < NUM_MOTORS; i++ ) {
+                setDirection( i, sign( commandArray[i].command.accelerating.accelerations[i] ) );
+            }
+        } else if( commandArray[0].commandType == Home ) {
+            for( i = 0; i < NUM_MOTORS; i++ ) {
+                setDirection( i, sign( commandArray[i].command.home.accelerations[i] ) );
+            }
         }
         commandCount  = 0;
         TIMER_enableInt( myTimer );
     }
+
     applyCommand( &commandArray[commandCount] );
 }
 
