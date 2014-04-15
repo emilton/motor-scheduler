@@ -1,6 +1,7 @@
 #include <limits.h>
 
 #include "DSP28x_Project.h"
+#include "F2802x_Device.h"
 
 #include "f2802x_common/include/clk.h"
 #include "f2802x_common/include/flash.h"
@@ -14,23 +15,46 @@
 #include "comm.h"
 #include "scheduler.h"
 
+#define X_STEP GPIO_Number_0
+#define Y_STEP GPIO_Number_2
+#define Z_STEP GPIO_Number_7
+#define A_STEP GPIO_Number_5
+
+#define X_DIRECTION GPIO_Number_4
+#define Y_DIRECTION GPIO_Number_6
+#define Z_DIRECTION GPIO_Number_1
+#define A_DIRECTION GPIO_Number_6
+
+#define X_HOME GPIO_Number_4
+#define Y_HOME GPIO_Number_3
+#define Z_HOME GPIO_Number_32
+#define A_HOME GPIO_Number_33
+
+#define DRIVER_ENABLE GPIO_Number_2
+#define FAULT GPIO_Number_12
+
+#define sign(x) ( x >= 0 )
+
 #pragma CODE_SECTION( commandReceive, "ramfuncs" );
 #pragma CODE_SECTION( readSpi, "ramfuncs" );
-#pragma CODE_SECTION( toggleLedsInterrupt, "ramfuncs" );
+#pragma CODE_SECTION( updateMotorsInterrupt, "ramfuncs" );
 
+static void listenForShutdown( void );
 static void commandReceive( void );
 static uint8_t readSpi( void );
-static void handlesInit( void );
+static void handleInit( void );
 static void gpioInit( void );
 static void spiInit( void );
 static void interruptInit( void );
-static interrupt void toggleLedsInterrupt( void );
+static interrupt void updateMotorsInterrupt( void );
+static void clearMotors( void );
 
-CLK_Handle myClk;
-CPU_Handle myCpu;
 #ifdef _FLASH
 FLASH_Handle myFlash;
 #endif
+
+CLK_Handle myClk;
+CPU_Handle myCpu;
 GPIO_Handle myGpio;
 PIE_Handle myPie;
 PLL_Handle myPll;
@@ -38,31 +62,58 @@ SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
 
+static const GPIO_Number_e motorSteps[NUM_MOTORS+NUM_WORKHEADS] = {X_STEP, Y_STEP, Z_STEP, A_STEP};
+static const GPIO_Number_e motorDirections[NUM_MOTORS+NUM_WORKHEADS] = {X_DIRECTION, Y_DIRECTION, Z_DIRECTION, A_DIRECTION};
+static const GPIO_Number_e motorHomes[NUM_MOTORS+NUM_WORKHEADS] = {X_HOME, Y_HOME, Z_HOME, A_HOME};
+
+static Command_t commandArray[3];
+static int commandCount = 2;
+
 void main( void ) {
-    handlesInit();
+    handleInit();
     gpioInit();
     spiInit();
     interruptInit();
-    commandReceive();
+    schedulerInit();
+    for( ;; ) {
+        listenForShutdown();
+    }
+}
+
+static void listenForShutdown( void ) {
+    if( GPIO_getData( myGpio, GPIO_Number_19 ) ) {
+        // Disable motors and SHUT IT DOWN!!!
+    }
+}
+
+static void waitSpi( void ) {
+    for( ;; ) {
+        while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
+        if( ( SPI_read( mySpi ) & 0xFF ) != 0x5A ) {
+            SPI_write8( mySpi, 0xA5 );
+        } else {
+            SPI_write8( mySpi, 0 );
+            return;
+        }
+    }
 }
 
 static void commandReceive( void ) {
-    uint16_t command[ sizeof( Command_t ) ];
-    uint8_t readData;
-    size_t i = sizeof( uint8_t ), j;
+    int i;
+    uint16_t *commands = ( uint16_t* ) commandArray;
 
-    for( ;; ) {
-        for( i = 0; i < sizeof( Command_t ); i++ ) {
-            for( j = 0; j < 2; j++ ) {
-                command[i] >>= 8;
-                readData = readSpi();
-                command[i] |= ( readData << 8 );
-            }
-        }
-        while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
-        readSpi();
-        applyCommand( ( Command_t* )( command ) );
+    SPI_enable( mySpi );
+
+    waitSpi();
+    for( i = 0; i < sizeof( commandArray ); i++ ) {
+        commands[i] = readSpi();
+        commands[i] <<= 8;
+        commands[i] |= readSpi() & 0xFF;
     }
+    readSpi();
+    readSpi();
+
+    SPI_disable( mySpi );
 }
 
 static uint8_t readSpi( void ) {
@@ -70,70 +121,81 @@ static uint8_t readSpi( void ) {
 
     while( SPI_getRxFifoStatus( mySpi ) == SPI_FifoStatus_Empty ) {}
     readData = SPI_read( mySpi );
-    SPI_write8( mySpi, readData );
+    SPI_write8( mySpi, ~readData );
 
     return readData;
 }
 
-static void handlesInit( void ) {
-    myClk = CLK_init( ( void * )CLK_BASE_ADDR, sizeof( CLK_Obj ) );
-    myCpu = CPU_init( ( void * )NULL, sizeof( CPU_Obj ) );
+void getNewCommand( void ){
+    int i;
+    commandCount++;
+    if( commandCount >= 3 ){
+        commandReceive();
+        for( i = 0; i < NUM_MOTORS; i++ ) {
+            setDirection( i, sign( commandArray[i].command.accelerating.accelerations[i] ) );
+        }
+        commandCount  = 0;
+    }
+    applyCommand( &commandArray[commandCount] );
+}
+
+static void handleInit( void ) {
+    myClk  = CLK_init( ( void * )CLK_BASE_ADDR, sizeof( CLK_Obj ) );
+    myCpu  = CPU_init( ( void * )NULL, sizeof( CPU_Obj ) );
 #ifdef _FLASH
     myFlash = FLASH_init( (void * )FLASH_BASE_ADDR, sizeof( FLASH_Obj ) );
 #endif
     myGpio = GPIO_init( ( void * )GPIO_BASE_ADDR, sizeof( GPIO_Obj ) );
-    myPie = PIE_init( ( void * )PIE_BASE_ADDR, sizeof( PIE_Obj ) );
-    myPll = PLL_init( ( void * )PLL_BASE_ADDR, sizeof( PLL_Obj ) );
-    mySpi = SPI_init( ( void * )SPIA_BASE_ADDR, sizeof( SPI_Obj ) );
-    myTimer = TIMER_init( ( void * )TIMER0_BASE_ADDR, sizeof( TIMER_Obj ));
+    myPie  = PIE_init( ( void * )PIE_BASE_ADDR, sizeof( PIE_Obj ) );
+    myPll  = PLL_init( ( void * )PLL_BASE_ADDR, sizeof( PLL_Obj ) );
+    mySpi  = SPI_init( ( void * )SPIA_BASE_ADDR, sizeof( SPI_Obj ) );
+    myTimer= TIMER_init( ( void * )TIMER0_BASE_ADDR, sizeof( TIMER_Obj ));
     myWDog = WDOG_init( ( void * )WDOG_BASE_ADDR, sizeof( WDOG_Obj ));
 
     // Perform basic system initialization
     WDOG_disable( myWDog );
     CLK_enableAdcClock( myClk );
     ( *Device_cal )();
-
-    // Enable SPI-A Clock
     CLK_enableSpiaClock( myClk );
-
-    //Select the internal oscillator 1 as the clock source
     CLK_setOscSrc( myClk, CLK_OscSrc_Internal );
-
-    // Setup the PLL for x12 /2 which will yield 60Mhz = 10Mhz * 12 / 2
-    PLL_setup( myPll, PLL_Multiplier_12, PLL_DivideSelect_ClkIn_by_2 );
-
-    // Disable the PIE and all interrupts
+    PLL_setup( myPll, PLL_Multiplier_12, PLL_DivideSelect_ClkIn_by_1 );
     PIE_disable( myPie );
     PIE_disableAllInts( myPie );
     CPU_disableGlobalInts( myCpu );
     CPU_clearIntFlags( myCpu );
 
-    // If running from flash copy RAM only functions to RAM
-#ifdef _FLASH
-    memcpy( &RamfuncsRunStart, &RamfuncsLoadStart, ( size_t )&RamfuncsLoadSize );
-#endif
+	#ifdef _FLASH
+		memcpy( &RamfuncsRunStart, &RamfuncsLoadStart, ( size_t )&RamfuncsLoadSize );
+	#endif
+	#ifdef _DEBUG
+		PIE_setDebugIntVectorTable( myPie );
+	#endif
 
-    // Setup a debug vector table and enable the PIE
-#ifdef _DEBUG
-    PIE_setDebugIntVectorTable( myPie );
-#endif
     PIE_enable( myPie );
 }
 
 static void gpioInit( void ) {
-    GPIO_setMode( myGpio, GPIO_Number_0, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_1, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_2, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setMode( myGpio, GPIO_Number_3, GPIO_0_Mode_GeneralPurpose );
-    GPIO_setDirection( myGpio, GPIO_Number_0, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_1, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_2, GPIO_Direction_Output );
-    GPIO_setDirection( myGpio, GPIO_Number_3, GPIO_Direction_Output );
-    GPIO_setLow( myGpio, GPIO_Number_0 );
-    GPIO_setHigh( myGpio, GPIO_Number_1 );
-    GPIO_setHigh( myGpio, GPIO_Number_2 );
-    GPIO_setLow( myGpio, GPIO_Number_3 );
+    ENABLE_PROTECTED_REGISTER_WRITE_MODE;
+    (( GPIO_Obj* )myGpio )->GPAMUX1 = 0;
+    (( GPIO_Obj* )myGpio )->GPBMUX1 = 0;
+    (( GPIO_Obj* )myGpio )->AIOMUX1 = 0;
+    (( GPIO_Obj* )myGpio )->GPADIR |=  (( 1 << X_STEP ) | ( 1 << Y_STEP ) | ( 1 << Z_STEP ) | ( 1 << A_STEP ));
+    (( GPIO_Obj* )myGpio )->GPADIR &= ~(( 1 << X_HOME ) | ( 1 << Y_HOME )  | ( 1 << FAULT ));
+    (( GPIO_Obj* )myGpio )->GPBDIR &= ~(( 1 << (Z_HOME - GPIO_Number_32) ) | ( 1 << (A_HOME - GPIO_Number_32) ));
+    (( GPIO_Obj* )myGpio )->GPADIR |=  (( 1 << Z_DIRECTION ) | ( 1 << A_DIRECTION ));
+    (( GPIO_Obj* )myGpio )->AIODIR |=  (( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE ));
+    DISABLE_PROTECTED_REGISTER_WRITE_MODE;
 
+    (( GPIO_Obj* )myGpio )->GPASET = ( 1 << X_STEP ) | ( 1 << Y_STEP ) | ( 1 << Z_STEP ) | ( 1 << A_STEP );
+	(( GPIO_Obj* )myGpio )->GPASET = ( 1 << Z_DIRECTION ) | ( 1 << A_DIRECTION );
+    (( GPIO_Obj* )myGpio )->AIOSET = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
+/*
+    ENABLE_PROTECTED_REGISTER_WRITE_MODE;
+    (( GPIO_Obj* )myGpio )->GPAPUD   &= ~(( 1 << GPIO_Number_16 ) | ( 1 << GPIO_Number_17 ) | ( 1 << GPIO_Number_18 ) | ( 1 << GPIO_Number_19 ));
+    (( GPIO_Obj* )myGpio )->GPAQSEL2 &= ~(( GPIO_Qual_ASync << (2*(GPIO_Number_16-GPIO_Rsvd_15))) | ( GPIO_Qual_ASync << (2*(GPIO_Number_17-GPIO_Rsvd_15))) | ( GPIO_Qual_ASync << (2*(GPIO_Number_18-GPIO_Rsvd_15))) | ( GPIO_Qual_ASync << (2*(GPIO_Number_19-GPIO_Rsvd_15))));
+    DISABLE_PROTECTED_REGISTER_WRITE_MODE;
+*/
+    // Left as-is for time being, setMode is a little more complex.
     GPIO_setPullUp( myGpio, GPIO_Number_16, GPIO_PullUp_Enable );
     GPIO_setPullUp( myGpio, GPIO_Number_17, GPIO_PullUp_Enable );
     GPIO_setPullUp( myGpio, GPIO_Number_18, GPIO_PullUp_Enable );
@@ -168,19 +230,14 @@ static void spiInit( void ) {
 
     // Set so breakpoints don't disturb transmission
     SPI_setPriority( mySpi, SPI_Priority_Immediate );
-
-    SPI_enable( mySpi );
 }
 
 static void interruptInit( void ) {
     // Register interrupt handlers in the PIE vector table
-    PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&toggleLedsInterrupt );
+    PIE_registerPieIntHandler( myPie, PIE_GroupNumber_1, PIE_SubGroupNumber_7, ( intVec_t )&updateMotorsInterrupt );
 
-    // Configure CPU-Timer 0 to interrupt every 500 milliseconds:
-    // 60MHz CPU Freq, 50 millisecond Period ( in uSeconds )
-    //    ConfigCpuTimer( &CpuTimer0, 60, 500000 );
     TIMER_stop( myTimer );
-    TIMER_setPeriod( myTimer, 50 * 500000 );
+    TIMER_setPeriod( myTimer, 2400 );
     TIMER_setPreScaler( myTimer, 0 );
     TIMER_reload( myTimer );
     TIMER_setEmulationMode( myTimer, TIMER_EmulationMode_StopAfterNextDecrement );
@@ -189,18 +246,48 @@ static void interruptInit( void ) {
 
     CPU_enableInt( myCpu, CPU_IntNumber_1 );
     PIE_enableTimer0Int( myPie );
-
-    // Enable global Interrupts and higher priority real-time debug events
     CPU_enableGlobalInts( myCpu );
     CPU_enableDebugInt( myCpu );
 }
 
-static interrupt void toggleLedsInterrupt( void ) {
-    GPIO_toggle( myGpio, GPIO_Number_0 );
-    GPIO_toggle( myGpio, GPIO_Number_1 );
-    GPIO_toggle( myGpio, GPIO_Number_2 );
-    GPIO_toggle( myGpio, GPIO_Number_3 );
-
-    // Acknowledge this interrupt to receive more interrupts from group 1
+static interrupt void updateMotorsInterrupt( void ) {
+    clearMotors();
+    updateMotors();
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
+}
+
+static void clearMotors( void ) {
+    int i;
+    for( i = 0; i < NUM_MOTORS; i++ ) {
+    	(( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorSteps[i] );
+    }
+}
+
+int moveMotor( int i ) {
+	(( GPIO_Obj* )myGpio )->GPASET = ( 1 << motorSteps[i] );
+    return 1;
+}
+int checkHome( int i ){
+	if( i < 2 ){
+		return((( GPIO_Obj* )myGpio )->GPADAT & ( 1 <<  motorHomes[i] ));
+	}
+	else{
+		return((( GPIO_Obj* )myGpio )->GPBDAT & ( 1 << (motorHomes[i] - GPIO_Number_32)));
+	}
+}
+int setDirection( int i, int forwardDirection ) {
+    if( i < 2 ){
+        if( forwardDirection ) {
+            (( GPIO_Obj* )myGpio )->AIOSET   = ( 1 << motorDirections[i] );
+        } else {
+            (( GPIO_Obj* )myGpio )->AIOCLEAR = ( 1 << motorDirections[i] );
+        }
+    } else {
+        if( forwardDirection ) {
+        	(( GPIO_Obj* )myGpio )->GPASET   = ( 1 << motorDirections[i] );
+        } else {
+        	(( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorDirections[i] );
+        }
+    }
+    return 1;
 }
