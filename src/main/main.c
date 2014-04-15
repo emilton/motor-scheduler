@@ -42,6 +42,7 @@
 static void listenForShutdown( void );
 static void commandReceive( void );
 static uint8_t readSpi( void );
+static void getNewCommand( void );
 static void handleInit( void );
 static void gpioInit( void );
 static void spiInit( void );
@@ -69,6 +70,8 @@ static const GPIO_Number_e motorHomes[NUM_MOTORS+NUM_WORKHEADS] = {X_HOME, Y_HOM
 static Command_t commandArray[3];
 static int commandCount = 2;
 
+static char shouldGetNextCommand = 0;
+
 void main( void ) {
     handleInit();
     gpioInit();
@@ -77,6 +80,10 @@ void main( void ) {
     schedulerInit();
     for( ;; ) {
         listenForShutdown();
+        if( shouldGetNextCommand ) {
+            getNewCommand();
+            shouldGetNextCommand = 0;
+        }
     }
 }
 
@@ -126,15 +133,17 @@ static uint8_t readSpi( void ) {
     return readData;
 }
 
-void getNewCommand( void ){
+static void getNewCommand( void ){
     int i;
     commandCount++;
     if( commandCount >= 3 ){
+        TIMER_disableInt( myTimer );
         commandReceive();
         for( i = 0; i < NUM_MOTORS; i++ ) {
             setDirection( i, sign( commandArray[i].command.accelerating.accelerations[i] ) );
         }
         commandCount  = 0;
+        TIMER_enableInt( myTimer );
     }
     applyCommand( &commandArray[commandCount] );
 }
@@ -164,12 +173,12 @@ static void handleInit( void ) {
     CPU_disableGlobalInts( myCpu );
     CPU_clearIntFlags( myCpu );
 
-	#ifdef _FLASH
-		memcpy( &RamfuncsRunStart, &RamfuncsLoadStart, ( size_t )&RamfuncsLoadSize );
-	#endif
-	#ifdef _DEBUG
-		PIE_setDebugIntVectorTable( myPie );
-	#endif
+    #ifdef _FLASH
+        memcpy( &RamfuncsRunStart, &RamfuncsLoadStart, ( size_t )&RamfuncsLoadSize );
+    #endif
+    #ifdef _DEBUG
+        PIE_setDebugIntVectorTable( myPie );
+    #endif
 
     PIE_enable( myPie );
 }
@@ -187,7 +196,7 @@ static void gpioInit( void ) {
     DISABLE_PROTECTED_REGISTER_WRITE_MODE;
 
     (( GPIO_Obj* )myGpio )->GPASET = ( 1 << X_STEP ) | ( 1 << Y_STEP ) | ( 1 << Z_STEP ) | ( 1 << A_STEP );
-	(( GPIO_Obj* )myGpio )->GPASET = ( 1 << Z_DIRECTION ) | ( 1 << A_DIRECTION );
+    (( GPIO_Obj* )myGpio )->GPASET = ( 1 << Z_DIRECTION ) | ( 1 << A_DIRECTION );
     (( GPIO_Obj* )myGpio )->AIOSET = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
 /*
     ENABLE_PROTECTED_REGISTER_WRITE_MODE;
@@ -252,28 +261,30 @@ static void interruptInit( void ) {
 
 static interrupt void updateMotorsInterrupt( void ) {
     clearMotors();
-    updateMotors();
+    if( updateMotors() == -1 ) {
+        shouldGetNextCommand = 1;
+    }
     PIE_clearInt( myPie, PIE_GroupNumber_1 );
 }
 
 static void clearMotors( void ) {
     int i;
     for( i = 0; i < NUM_MOTORS; i++ ) {
-    	(( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorSteps[i] );
+        (( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorSteps[i] );
     }
 }
 
 int moveMotor( int i ) {
-	(( GPIO_Obj* )myGpio )->GPASET = ( 1 << motorSteps[i] );
+    (( GPIO_Obj* )myGpio )->GPASET = ( 1 << motorSteps[i] );
     return 1;
 }
 int checkHome( int i ){
-	if( i < 2 ){
-		return((( GPIO_Obj* )myGpio )->GPADAT & ( 1 <<  motorHomes[i] ));
-	}
-	else{
-		return((( GPIO_Obj* )myGpio )->GPBDAT & ( 1 << (motorHomes[i] - GPIO_Number_32)));
-	}
+    if( i < 2 ){
+        return((( GPIO_Obj* )myGpio )->GPADAT & ( 1 <<  motorHomes[i] ));
+    }
+    else{
+        return((( GPIO_Obj* )myGpio )->GPBDAT & ( 1 << (motorHomes[i] - GPIO_Number_32)));
+    }
 }
 int setDirection( int i, int forwardDirection ) {
     if( i < 2 ){
@@ -284,9 +295,9 @@ int setDirection( int i, int forwardDirection ) {
         }
     } else {
         if( forwardDirection ) {
-        	(( GPIO_Obj* )myGpio )->GPASET   = ( 1 << motorDirections[i] );
+            (( GPIO_Obj* )myGpio )->GPASET   = ( 1 << motorDirections[i] );
         } else {
-        	(( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorDirections[i] );
+            (( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorDirections[i] );
         }
     }
     return 1;
