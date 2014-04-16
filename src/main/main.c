@@ -71,7 +71,7 @@ static Command_t commandArray[3];
 static int numberCommands = 0;
 static int commandCount = 0;
 
-static char shouldGetNextCommand = 0;
+static int shouldGetNextCommand = 0;
 
 void main( void ) {
     handleInit();
@@ -293,26 +293,23 @@ int moveMotor( int i ) {
     (( GPIO_Obj* )myGpio )->GPASET = ( 1 << motorSteps[i] );
     return 1;
 }
-int checkHome( int i ){
-    if( i < 2 ){
-        return((( GPIO_Obj* )myGpio )->GPADAT & ( 1 <<  motorHomes[i] ));
-    }
-    else{
-        return((( GPIO_Obj* )myGpio )->GPBDAT & ( 1 << (motorHomes[i] - GPIO_Number_32)));
-    }
+
+int isHomed( int motorNumber ){
+    return GPIO_getData( myGpio, motorHomes[motorNumber] );
 }
-int setDirection( int i, int forwardDirection ) {
-    if( i < 2 ){
+
+int setDirection( int motorNumber, int forwardDirection ) {
+    if( motorNumber < 2 ){
         if( forwardDirection ) {
-            (( GPIO_Obj* )myGpio )->AIOSET   = ( 1 << motorDirections[i] );
+            ( ( GPIO_Obj* )myGpio )->AIOSET   = ( 1 << motorDirections[motorNumber] );
         } else {
-            (( GPIO_Obj* )myGpio )->AIOCLEAR = ( 1 << motorDirections[i] );
+            ( ( GPIO_Obj* )myGpio )->AIOCLEAR = ( 1 << motorDirections[motorNumber] );
         }
     } else {
         if( forwardDirection ) {
-            (( GPIO_Obj* )myGpio )->GPASET   = ( 1 << motorDirections[i] );
+            ( ( GPIO_Obj* )myGpio )->GPASET   = ( 1 << motorDirections[motorNumber] );
         } else {
-            (( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorDirections[i] );
+            ( ( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << motorDirections[motorNumber] );
         }
     }
     return 1;

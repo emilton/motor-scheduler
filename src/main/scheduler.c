@@ -5,13 +5,9 @@
 
 static MotorMovement motorMovement[NUM_MOTORS];
 
-#pragma CODE_SECTION( updateMotors, "ramfuncs" );
-#pragma CODE_SECTION( applyCommand, "ramfuncs" );
-#pragma CODE_SECTION( applyAcceleration, "ramfuncs" );
-#pragma CODE_SECTION( applyConstantSpeed, "ramfuncs" );
-
 static int applyAcceleration( Accelerating_t *accelerating );
 static int applyConstantSpeed( ConstantSpeed_t *constantSpeed );
+static int applyHome( Home_t *home );
 
 int schedulerInit( void ) {
     int i;
@@ -67,7 +63,7 @@ int applyCommand( Command_t *command ) {
         case WorkHead:
             return 1;
         case Home:
-            return 0;
+            return applyHome( &command->command.home );
         default:
             return 0;
     }
@@ -95,3 +91,23 @@ static int applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
     }
     return 1;
 }
+
+static int applyHome( Home_t *home ) {
+    int numberHomed = 0;
+
+    motorMovement[0].acceleration = home->accelerations[0];
+    motorMovement[0].steps = -1;
+
+    while( numberHomed != 1 ) {
+        if( abs( motorMovement[0].speed ) > abs( home->speeds[0] ) ) {
+            motorMovement[0].acceleration = 0;
+            motorMovement[0].speed = home->speeds[0];
+        }
+        if( isHomed( 0 ) ) {
+            numberHomed++;
+        }
+    }
+
+    return 1;
+}
+
