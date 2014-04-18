@@ -100,6 +100,9 @@ static int applyHome( Home_t *home ) {
         motorMovement[i].acceleration = home->accelerations[i];
         motorMovement[i].steps = -1;
         while( !isHomed( i ) ) {
+            if( listenForShutdown() ) {
+                return 0;
+            }
             if( abs( motorMovement[i].speed ) > abs( home->speeds[i] ) ) {
                 motorMovement[i].acceleration = 0;
                 motorMovement[i].speed = home->speeds[i];

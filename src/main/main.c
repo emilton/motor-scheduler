@@ -34,7 +34,6 @@
 #define DRIVER_ENABLE GPIO_Number_2
 #define FAULT GPIO_Number_12
 
-static void listenForShutdown( void );
 static void commandReceive( void );
 static uint8_t readSpi( void );
 static void getNewCommand( void );
@@ -83,10 +82,12 @@ void main( void ) {
     }
 }
 
-static void listenForShutdown( void ) {
+int listenForShutdown( void ) {
     if( !GPIO_getData( myGpio, PI_EMERGENCY_STOP ) ) {
-    	schedulerInit();
+        schedulerInit();
+        return 1;
     }
+    return 0;
 }
 
 static int waitSpi( void ) {

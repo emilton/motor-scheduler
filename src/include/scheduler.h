@@ -9,6 +9,7 @@ struct MotorMovement {
     int32_t acceleration;
 };
 
+extern int listenForShutdown( void );
 extern int schedulerInit( void );
 extern int applyCommand( Command_t *command );
 extern int updateMotors( void );
