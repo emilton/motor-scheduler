@@ -65,14 +65,14 @@ static Command_t commandArray[3];
 static int numberCommands = 0;
 static int commandCount = 0;
 
-static int shouldGetNextCommand = 0;
+static int shouldGetNextCommand = 1;
 
 void main( void ) {
     handleInit();
     gpioInit();
     spiInit();
-    interruptInit();
     schedulerInit();
+    interruptInit();
     for( ;; ) {
         listenForShutdown();
         if( shouldGetNextCommand ) {
