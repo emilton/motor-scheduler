@@ -33,12 +33,6 @@
 #define DRIVER_ENABLE GPIO_Number_2
 #define FAULT GPIO_Number_12
 
-#define sign(x) ( x >= 0 )
-
-#pragma CODE_SECTION( commandReceive, "ramfuncs" );
-#pragma CODE_SECTION( readSpi, "ramfuncs" );
-#pragma CODE_SECTION( updateMotorsInterrupt, "ramfuncs" );
-
 static void listenForShutdown( void );
 static void commandReceive( void );
 static uint8_t readSpi( void );
@@ -86,6 +80,10 @@ void main( void ) {
             shouldGetNextCommand = 0;
         }
     }
+}
+
+void moveA( void ) {
+	GPIO_toggle( myGpio, A_STEP );
 }
 
 static void listenForShutdown( void ) {
@@ -140,12 +138,12 @@ static uint8_t readSpi( void ) {
     return readData;
 }
 
+
 static void getNewCommand( void ){
     int i;
     commandCount++;
-    if( commandCount >= numberCommands ){
+    if( commandCount >= numberCommands ) {
         TIMER_disableInt( myTimer );
-        GPIO_toggle( myGpio, A_STEP );
         commandReceive();
         if( commandArray[0].commandType == Accelerating ) {
             for( i = 0; i < NUM_MOTORS; i++ ) {
@@ -188,9 +186,6 @@ static void handleInit( void ) {
     CPU_disableGlobalInts( myCpu );
     CPU_clearIntFlags( myCpu );
 
-    #ifdef _FLASH
-        memcpy( &RamfuncsRunStart, &RamfuncsLoadStart, ( size_t )&RamfuncsLoadSize );
-    #endif
     #ifdef _DEBUG
         PIE_setDebugIntVectorTable( myPie );
     #endif
@@ -210,7 +205,7 @@ static void gpioInit( void ) {
     (( GPIO_Obj* )myGpio )->AIODIR |=  (( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE ));
     DISABLE_PROTECTED_REGISTER_WRITE_MODE;
 
-    (( GPIO_Obj* )myGpio )->GPASET = ( 1 << X_STEP ) | ( 1 << Y_STEP ) | ( 1 << Z_STEP ) | ( 1 << A_STEP );
+    (( GPIO_Obj* )myGpio )->GPACLEAR = ( 1 << X_STEP ) | ( 1 << Y_STEP ) | ( 1 << Z_STEP ) | ( 1 << A_STEP );
     (( GPIO_Obj* )myGpio )->GPASET = ( 1 << Z_DIRECTION ) | ( 1 << A_DIRECTION );
     (( GPIO_Obj* )myGpio )->AIOSET = ( 1 << X_DIRECTION ) | ( 1 << Y_DIRECTION ) | ( 1 << DRIVER_ENABLE );
 /*
@@ -290,12 +285,12 @@ static void clearMotors( void ) {
 }
 
 int moveMotor( int i ) {
-    (( GPIO_Obj* )myGpio )->GPASET = ( 1 << motorSteps[i] );
+    GPIO_setHigh( myGpio, motorSteps[i] );
     return 1;
 }
 
 int isHomed( int motorNumber ){
-    return GPIO_getData( myGpio, motorHomes[motorNumber] );
+    return !GPIO_getData( myGpio, motorHomes[motorNumber] );
 }
 
 int setDirection( int motorNumber, int forwardDirection ) {

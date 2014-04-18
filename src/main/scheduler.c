@@ -93,19 +93,19 @@ static int applyConstantSpeed( ConstantSpeed_t *constantSpeed ) {
 }
 
 static int applyHome( Home_t *home ) {
-    int numberHomed = 0;
+    int i;
 
-    motorMovement[0].acceleration = home->accelerations[0];
-    motorMovement[0].steps = -1;
-
-    while( numberHomed != 1 ) {
-        if( abs( motorMovement[0].speed ) > abs( home->speeds[0] ) ) {
-            motorMovement[0].acceleration = 0;
-            motorMovement[0].speed = home->speeds[0];
+    for( i = 0; i < NUM_MOTORS; i++ ) {
+        setDirection( i, sign( home->accelerations[i] ) );
+        motorMovement[i].acceleration = home->accelerations[i];
+        motorMovement[i].steps = -1;
+        while( !isHomed( i ) ) {
+            if( abs( motorMovement[i].speed ) > abs( home->speeds[i] ) ) {
+                motorMovement[i].acceleration = 0;
+                motorMovement[i].speed = home->speeds[i];
+            }
         }
-        if( isHomed( 0 ) ) {
-            numberHomed++;
-        }
+        motorMovement[i].steps = 0;
     }
 
     return 1;

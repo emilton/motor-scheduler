@@ -1,3 +1,5 @@
+#define sign(x) ( x >= 0 )
+
 typedef struct MotorMovement MotorMovement;
 
 struct MotorMovement {
