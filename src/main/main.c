@@ -30,6 +30,7 @@
 #define Z_HOME GPIO_Number_32
 #define A_HOME GPIO_Number_33
 
+#define PI_EMERGENCY_STOP GPIO_Number_28
 #define DRIVER_ENABLE GPIO_Number_2
 #define FAULT GPIO_Number_12
 
@@ -82,13 +83,9 @@ void main( void ) {
     }
 }
 
-void moveA( void ) {
-	GPIO_toggle( myGpio, A_STEP );
-}
-
 static void listenForShutdown( void ) {
-    if( GPIO_getData( myGpio, GPIO_Number_19 ) ) {
-        // Disable motors and SHUT IT DOWN!!!
+    if( !GPIO_getData( myGpio, PI_EMERGENCY_STOP ) ) {
+    	schedulerInit();
     }
 }
 
@@ -227,6 +224,10 @@ static void gpioInit( void ) {
     GPIO_setMode( myGpio, GPIO_Number_17, GPIO_17_Mode_SPISOMIA );
     GPIO_setMode( myGpio, GPIO_Number_18, GPIO_18_Mode_SPICLKA );
     GPIO_setMode( myGpio, GPIO_Number_19, GPIO_19_Mode_SPISTEA_NOT );
+
+    GPIO_setPullUp( myGpio, PI_EMERGENCY_STOP, GPIO_PullUp_Enable );
+    GPIO_setMode( myGpio, PI_EMERGENCY_STOP, GPIO_28_Mode_GeneralPurpose );
+    GPIO_setDirection( myGpio, PI_EMERGENCY_STOP, GPIO_Direction_Input );
 }
 
 static void spiInit( void ) {
