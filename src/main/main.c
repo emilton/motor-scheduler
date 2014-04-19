@@ -11,6 +11,7 @@
 #include "f2802x_common/include/spi.h"
 #include "f2802x_common/include/timer.h"
 #include "f2802x_common/include/wdog.h"
+#include "f2802x_common/include/pwm.h"
 
 #include "comm.h"
 #include "scheduler.h"
@@ -34,6 +35,8 @@
 #define DRIVER_ENABLE GPIO_Number_2
 #define FAULT GPIO_Number_12
 
+#define ePWM3Period 3000 // this comes out to 10kHz @ 2x clock divide
+
 static void commandReceive( void );
 static uint8_t readSpi( void );
 static void getNewCommand( void );
@@ -43,6 +46,7 @@ static void spiInit( void );
 static void interruptInit( void );
 static interrupt void updateMotorsInterrupt( void );
 static void clearMotors( void );
+static void InitEPwm1( void );
 
 #ifdef _FLASH
 FLASH_Handle myFlash;
@@ -56,6 +60,7 @@ PLL_Handle myPll;
 SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
+PWM_Handle myPwm3;
 
 static const GPIO_Number_e motorSteps[NUM_MOTORS+NUM_WORKHEADS] = {X_STEP, Y_STEP, Z_STEP, A_STEP};
 static const GPIO_Number_e motorDirections[NUM_MOTORS+NUM_WORKHEADS] = {X_DIRECTION, Y_DIRECTION, Z_DIRECTION, A_DIRECTION};
@@ -69,10 +74,12 @@ static int shouldGetNextCommand = 1;
 
 void main( void ) {
     handleInit();
+    InitEPwm1();
     gpioInit();
     spiInit();
     schedulerInit();
     interruptInit();
+
     for( ;; ) {
         listenForShutdown();
         if( shouldGetNextCommand ) {
@@ -171,6 +178,7 @@ static void handleInit( void ) {
     mySpi  = SPI_init( ( void * )SPIA_BASE_ADDR, sizeof( SPI_Obj ) );
     myTimer= TIMER_init( ( void * )TIMER0_BASE_ADDR, sizeof( TIMER_Obj ));
     myWDog = WDOG_init( ( void * )WDOG_BASE_ADDR, sizeof( WDOG_Obj ));
+    myPwm3 = PWM_init((void *)PWM_ePWM3_BASE_ADDR, sizeof(PWM_Obj));
 
     // Perform basic system initialization
     WDOG_disable( myWDog );
@@ -271,6 +279,30 @@ static void interruptInit( void ) {
     CPU_enableDebugInt( myCpu );
 }
 
+// Switched from PWM1A (worked) to PWM3B (needs verification)
+static void InitEPwm1( void ) {
+	CLK_disableTbClockSync(myClk);
+	CLK_enablePwmClock(myClk, PWM_Number_3);
+
+	// Setup TBCLK
+	PWM_setCounterMode(myPwm3, PWM_CounterMode_Up);         // Count up
+	PWM_setPeriod(myPwm3, ePWM3Period);                     // Set timer period
+	PWM_disableCounterLoad(myPwm3);                         // Disable phase loading
+	PWM_setPhase(myPwm3, 0x0000);                           // Phase is 0
+	PWM_setCount(myPwm3, 0x0000);                           // Clear counter
+	PWM_setHighSpeedClkDiv(myPwm3, PWM_HspClkDiv_by_2);     // Clock ratio to SYSCLKOUT
+	PWM_setClkDiv(myPwm3, PWM_ClkDiv_by_2);
+
+	// Setup shadow register load on ZERO
+	PWM_setShadowMode_CmpB(myPwm3, PWM_ShadowMode_Shadow);
+	PWM_setLoadMode_CmpB(myPwm3, PWM_LoadMode_Zero);
+
+	// Set actions
+	PWM_setActionQual_Zero_PwmB(myPwm3, PWM_ActionQual_Set);
+	PWM_setActionQual_CntUp_CmpB_PwmB(myPwm3, PWM_ActionQual_Clear);
+
+
+}
 static interrupt void updateMotorsInterrupt( void ) {
     clearMotors();
     if( updateMotors() == -1 ) {
@@ -286,12 +318,27 @@ static void clearMotors( void ) {
     }
 }
 
+int setWorkHead( int dutyCycle ) {
+	if( dutyCycle <= 0 || dutyCycle >= 100 ) {
+	    CLK_disableTbClockSync(myClk);
+		GPIO_setPullUp(myGpio, A_STEP, GPIO_PullUp_Enable);
+		GPIO_setMode(myGpio, A_STEP, GPIO_5_Mode_GeneralPurpose);
+	}
+	else {
+		GPIO_setPullUp(myGpio, A_STEP, GPIO_PullUp_Disable);
+		GPIO_setMode(myGpio, A_STEP, GPIO_5_Mode_EPWM3B);
+		PWM_setCmpB(myPwm3, (dutyCycle*ePWM3Period)/100);
+		CLK_enableTbClockSync(myClk);
+	}
+	return 1;
+}
+
 int moveMotor( int i ) {
     GPIO_setHigh( myGpio, motorSteps[i] );
     return 1;
 }
 
-int isHomed( int motorNumber ){
+int isHomed( int motorNumber ) {
     return !GPIO_getData( myGpio, motorHomes[motorNumber] );
 }
 

@@ -31,9 +31,8 @@ struct Home_t {
 };
 
 struct WorkHead_t {
-	int32_t frequency;
 	int32_t dutyCycle;
-	int32_t acceleration;
+	int32_t direction;
 };
 
 struct Command_t {

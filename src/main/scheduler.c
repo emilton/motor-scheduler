@@ -8,6 +8,7 @@ static MotorMovement motorMovement[NUM_MOTORS];
 static int applyAcceleration( Accelerating_t *accelerating );
 static int applyConstantSpeed( ConstantSpeed_t *constantSpeed );
 static int applyHome( Home_t *home );
+static int applyWorkHead( WorkHead_t *work );
 
 int schedulerInit( void ) {
     int i;
@@ -61,12 +62,18 @@ int applyCommand( Command_t *command ) {
         case ConstantSpeed:
             return applyConstantSpeed( &command->command.constantSpeed );
         case WorkHead:
-            return 1;
+            return applyWorkHead( &command->command.workHead );
         case Home:
             return applyHome( &command->command.home );
         default:
             return 0;
     }
+}
+
+static int applyWorkHead( WorkHead_t *work ) {
+	setDirection( 3, sign( work->direction ) );
+	setWorkHead( work->dutyCycle );
+	return 1;
 }
 
 static int applyAcceleration( Accelerating_t *accelerating ) {
