@@ -35,7 +35,7 @@
 #define DRIVER_ENABLE GPIO_Number_2
 #define FAULT GPIO_Number_12
 
-#define ePWM3Period 3000 // this comes out to 10kHz @ 2x clock divide
+#define ePWM3Period 30000
 
 static void commandReceive( void );
 static uint8_t readSpi( void );
@@ -60,7 +60,7 @@ PLL_Handle myPll;
 SPI_Handle mySpi;
 TIMER_Handle myTimer;
 WDOG_Handle myWDog;
-PWM_Handle myPwm1;
+PWM_Handle myPwm3;
 
 static const GPIO_Number_e motorSteps[NUM_MOTORS+NUM_WORKHEADS] = {X_STEP, Y_STEP, Z_STEP, A_STEP};
 static const GPIO_Number_e motorDirections[NUM_MOTORS+NUM_WORKHEADS] = {X_DIRECTION, Y_DIRECTION, Z_DIRECTION, A_DIRECTION};
@@ -178,7 +178,7 @@ static void handleInit( void ) {
     mySpi  = SPI_init( ( void * )SPIA_BASE_ADDR, sizeof( SPI_Obj ) );
     myTimer= TIMER_init( ( void * )TIMER0_BASE_ADDR, sizeof( TIMER_Obj ));
     myWDog = WDOG_init( ( void * )WDOG_BASE_ADDR, sizeof( WDOG_Obj ));
-    myPwm1 = PWM_init((void *)PWM_ePWM1_BASE_ADDR, sizeof(PWM_Obj));
+    myPwm3 = PWM_init((void *)PWM_ePWM3_BASE_ADDR, sizeof(PWM_Obj));
 
     // Perform basic system initialization
     WDOG_disable( myWDog );
@@ -238,10 +238,8 @@ static void gpioInit( void ) {
     GPIO_setMode( myGpio, PI_EMERGENCY_STOP, GPIO_28_Mode_GeneralPurpose );
     GPIO_setDirection( myGpio, PI_EMERGENCY_STOP, GPIO_Direction_Input );
 
-    GPIO_setPullUp(myGpio, GPIO_Number_0, GPIO_PullUp_Disable);
-	GPIO_setPullUp(myGpio, GPIO_Number_1, GPIO_PullUp_Disable);
-	GPIO_setMode(myGpio, GPIO_Number_0, GPIO_0_Mode_EPWM1A);
-	GPIO_setMode(myGpio, GPIO_Number_1, GPIO_1_Mode_EPWM1B);
+	GPIO_setPullUp(myGpio, GPIO_Number_5, GPIO_PullUp_Disable);
+	GPIO_setMode(myGpio, GPIO_Number_5, GPIO_5_Mode_EPWM3B);
 }
 
 static void spiInit( void ) {
@@ -287,35 +285,35 @@ static void interruptInit( void ) {
 // Switched from PWM1A (worked) to PWM3B (needs verification)
 static void InitEPwm1( void ) {
 	CLK_disableTbClockSync(myClk);
-	CLK_enablePwmClock(myClk, PWM_Number_1);
+	CLK_enablePwmClock(myClk, PWM_Number_3);
 
 	// Setup TBCLK
-	PWM_setCounterMode(myPwm1, PWM_CounterMode_Up);         // Count up
-	PWM_setPeriod(myPwm1, 2000);               // Set timer period
-	PWM_disableCounterLoad(myPwm1);                         // Disable phase loading
-	PWM_setPhase(myPwm1, 0x0000);                           // Phase is 0
-	PWM_setCount(myPwm1, 0x0000);                           // Clear counter
-	PWM_setHighSpeedClkDiv(myPwm1, PWM_HspClkDiv_by_2);     // Clock ratio to SYSCLKOUT
-	PWM_setClkDiv(myPwm1, PWM_ClkDiv_by_2);
+	PWM_setCounterMode(myPwm3, PWM_CounterMode_Up);     // Count up
+	PWM_setPeriod(myPwm3, ePWM3Period);                 // Set timer period
+	PWM_disableCounterLoad(myPwm3);                     // Disable phase loading
+	PWM_setPhase(myPwm3, 0x0000);                       // Phase is 0
+	PWM_setCount(myPwm3, 0x0000);                       // Clear counter
+	PWM_setHighSpeedClkDiv(myPwm3, PWM_HspClkDiv_by_2); // Clock ratio to SYSCLKOUT
+	PWM_setClkDiv(myPwm3, PWM_ClkDiv_by_2);
 
 	// Setup shadow register load on ZERO
-	PWM_setShadowMode_CmpA(myPwm1, PWM_ShadowMode_Shadow);
-	PWM_setShadowMode_CmpB(myPwm1, PWM_ShadowMode_Shadow);
-	PWM_setLoadMode_CmpA(myPwm1, PWM_LoadMode_Zero);
-	PWM_setLoadMode_CmpB(myPwm1, PWM_LoadMode_Zero);
+	PWM_setShadowMode_CmpA(myPwm3, PWM_ShadowMode_Shadow);
+	PWM_setShadowMode_CmpB(myPwm3, PWM_ShadowMode_Shadow);
+	PWM_setLoadMode_CmpA(myPwm3, PWM_LoadMode_Zero);
+	PWM_setLoadMode_CmpB(myPwm3, PWM_LoadMode_Zero);
 
 	// Set Compare values
-	PWM_setCmpA(myPwm1, 50);    // Set compare A value
-	PWM_setCmpB(myPwm1, 1950);    // Set Compare B value
+	PWM_setCmpA(myPwm3, 5000);    // Set compare A value
+	PWM_setCmpB(myPwm3, 7500);    // Set Compare B value
 
-	// Set actions
-	PWM_setActionQual_Zero_PwmA(myPwm1, PWM_ActionQual_Set);            // Set PWM1A on Zero
-	PWM_setActionQual_CntUp_CmpA_PwmA(myPwm1, PWM_ActionQual_Clear);    // Clear PWM1A on event A, up count
+	// Set Actions
+	PWM_setActionQual_Zero_PwmA(myPwm3, PWM_ActionQual_Set);
+	PWM_setActionQual_CntUp_CmpA_PwmA(myPwm3, PWM_ActionQual_Clear);
 
-	PWM_setActionQual_Zero_PwmB(myPwm1, PWM_ActionQual_Set);            // Set PWM1B on Zero
-	PWM_setActionQual_CntUp_CmpB_PwmB(myPwm1, PWM_ActionQual_Clear);    // Clear PWM1B on event B, up count
+	PWM_setActionQual_Zero_PwmB(myPwm3, PWM_ActionQual_Set);
+	PWM_setActionQual_CntUp_CmpB_PwmB(myPwm3, PWM_ActionQual_Clear);
 
-	CLK_enableTbClockSync(myClk);
+	CLK_enableTbClockSync(myClk); // remove for release?
 }
 static interrupt void updateMotorsInterrupt( void ) {
     clearMotors();
@@ -341,7 +339,7 @@ int setWorkHead( int dutyCycle ) {
 	else {
 		GPIO_setPullUp(myGpio, A_STEP, GPIO_PullUp_Disable);
 		GPIO_setMode(myGpio, A_STEP, GPIO_5_Mode_EPWM3B);
-		PWM_setCmpB(myPwm1, (dutyCycle*ePWM3Period)/100);
+		PWM_setCmpB(myPwm3, (dutyCycle*ePWM3Period)/100);
 		CLK_enableTbClockSync(myClk);
 	}
 	return 1;
